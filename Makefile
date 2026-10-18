@@ -1,5 +1,5 @@
 # Common tasks. Run `make help` for the list.
-.PHONY: help up down logs run test fmt vet check
+.PHONY: help up down logs run test itest fmt vet check
 
 help:            ## Show available commands
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-8s %s\n", $$1, $$2}'
@@ -13,11 +13,14 @@ down:            ## Stop local stack
 logs:            ## Follow container logs
 	docker compose logs -f
 
-run:             ## Run the Go server locally
-	cd server && go run ./cmd/server
+run:             ## Run the Go server locally (loads .env if present)
+	set -a; [ ! -f .env ] || . ./.env; set +a; cd server && go run ./cmd/server
 
 test:            ## Run all Go tests
 	cd server && go test ./...
+
+itest:           ## Run integration tests (needs MongoDB: make up)
+	cd server && go test -tags=integration ./...
 
 fmt:             ## Format Go code
 	cd server && gofmt -w .
