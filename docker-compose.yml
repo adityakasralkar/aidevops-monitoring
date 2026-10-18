@@ -1,0 +1,30 @@
+# Local stack. Start with: docker compose up -d
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: aidevops-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Enabled once server/Dockerfile exists (Week 1).
+  # server:
+  #   build: ./server
+  #   container_name: aidevops-server
+  #   env_file: .env
+  #   environment:
+  #     MONGO_URI: mongodb://mongo:27017
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     mongo:
+  #       condition: service_healthy
+
+volumes:
+  mongo-data:

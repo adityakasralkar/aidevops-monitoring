@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────
+# 1. AI + planning files — LOCAL ONLY (Decision #19)
+#    Never pushed to GitHub. Back them up privately.
+# ─────────────────────────────────────────────
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+PROJECT_MASTER.md
+SETUP_GUIDE.md
+
+# ─────────────────────────────────────────────
+# 2. Secrets
+# ─────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─────────────────────────────────────────────
+# 3. Go
+# ─────────────────────────────────────────────
+/server/bin/
+*.exe
+*.test
+*.out
+coverage.*
+go.work
+go.work.sum
+
+# ─────────────────────────────────────────────
+# 4. Node (demo apps, dashboard)
+# ─────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.next/
+npm-debug.log*
+
+# ─────────────────────────────────────────────
+# 5. Local data, test output
+# ─────────────────────────────────────────────
+/data/
+/tests/load/results/
+*.log
+
+# ─────────────────────────────────────────────
+# 6. OS / editor
+# ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
