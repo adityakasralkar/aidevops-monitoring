@@ -11,7 +11,6 @@ Mid-semester phase: ingestion pipeline (custom JSON + OTLP, logs + metrics).
 | Path | Contents |
 |---|---|
 | `server/` | Go ingestion server |
-| `demo-apps/` | Sample services instrumented with OpenTelemetry |
 | `dashboard/` | Web dashboard (later phase) |
 | `tests/` | Ingestion test scripts and load tests |
 

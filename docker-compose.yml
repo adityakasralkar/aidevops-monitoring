@@ -1,7 +1,7 @@
 # Local stack. Start with: docker compose up -d
 services:
   mongo:
-    image: mongo:8.0
+    image: mongo:7.0
     container_name: aidevops-mongo
     ports:
       - "27017:27017"
