@@ -66,8 +66,14 @@ func run() error {
 	// 5. Create the HTTP server. The timeouts protect against slow or
 	// stuck clients holding connections open forever.
 	srv := &http.Server{
-		Addr:              net.JoinHostPort("", strconv.Itoa(cfg.Port)),
-		Handler:           api.NewRouter(logger, db),
+		Addr: net.JoinHostPort("", strconv.Itoa(cfg.Port)),
+		Handler: api.NewRouter(api.Deps{
+			Logger:   logger,
+			DB:       db,
+			Users:    db,
+			Sessions: db,
+			Projects: db,
+		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,

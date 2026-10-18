@@ -15,6 +15,8 @@ import (
 
 // Collection names.
 const (
+	CollUsers            = "Users"
+	CollSessions         = "Sessions"
 	CollApplications     = "Applications"
 	CollErrorLogs        = "ErrorLogs"
 	CollAppLogs          = "AppLogs"
@@ -29,15 +31,37 @@ const serverSelectionTimeout = 5 * time.Second
 // codeNamespaceExists is MongoDB's error code for "collection already exists".
 const codeNamespaceExists = 48
 
+// Names of unique indexes whose duplicate-key errors are turned into
+// friendly errors (see users.go and projects.go).
+const (
+	indexUserEmail       = "email_unique"
+	indexOwnerProjectEnv = "owner_project_env_unique"
+)
+
 // schema lists every collection and the indexes it needs.
 // Indexes have fixed names so they are easy to recognise in Compass.
 var schema = []struct {
 	name    string
 	indexes []mongo.IndexModel
 }{
+	// One account per email address.
+	{CollUsers, []mongo.IndexModel{
+		index(indexUserEmail, bson.D{{Key: "email", Value: 1}}).unique(),
+	}},
+	// Token lookup on every logged-in request; MongoDB deletes sessions
+	// automatically once expires_at has passed; user_id finds a user's sessions.
+	{CollSessions, []mongo.IndexModel{
+		index("token_hash_unique", bson.D{{Key: "token_hash", Value: 1}}).unique(),
+		index("expires_at_ttl", bson.D{{Key: "expires_at", Value: 1}}).ttl(),
+		index("user_id", bson.D{{Key: "user_id", Value: 1}}).model(),
+	}},
 	// Fast API-key lookup on every request; unique so no two projects share a key.
+	// A user cannot have two projects with the same name in the same environment.
+	// owner_created lists a user's projects newest first.
 	{CollApplications, []mongo.IndexModel{
 		index("api_key_hash_unique", bson.D{{Key: "api_key_hash", Value: 1}}).unique(),
+		index(indexOwnerProjectEnv, bson.D{{Key: "owner_id", Value: 1}, {Key: "project_name", Value: 1}, {Key: "environment", Value: 1}}).unique(),
+		index("owner_created", bson.D{{Key: "owner_id", Value: 1}, {Key: "created_at", Value: -1}}).model(),
 	}},
 	// Latest errors per project, and errors still waiting for diagnosis.
 	{CollErrorLogs, []mongo.IndexModel{
@@ -150,4 +174,10 @@ func (i indexSpec) model() mongo.IndexModel {
 // unique returns an index that rejects duplicate values.
 func (i indexSpec) unique() mongo.IndexModel {
 	return mongo.IndexModel{Keys: i.keys, Options: options.Index().SetName(i.name).SetUnique(true)}
+}
+
+// ttl returns an index that makes MongoDB delete each document once the
+// indexed date has passed. MongoDB checks about once a minute.
+func (i indexSpec) ttl() mongo.IndexModel {
+	return mongo.IndexModel{Keys: i.keys, Options: options.Index().SetName(i.name).SetExpireAfterSeconds(0)}
 }
