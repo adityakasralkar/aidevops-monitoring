@@ -81,7 +81,9 @@ func TestEnsureSchemaCreatesCollectionsAndIndexes(t *testing.T) {
 	}
 
 	want := map[string][]string{
-		CollApplications:     {"api_key_hash_unique"},
+		CollUsers:            {"email_unique"},
+		CollSessions:         {"token_hash_unique", "expires_at_ttl", "user_id"},
+		CollApplications:     {"api_key_hash_unique", "owner_project_env_unique", "owner_created"},
 		CollErrorLogs:        {"project_timestamp", "project_diagnosis_status"},
 		CollAppLogs:          {"project_timestamp"},
 		CollTelemetryMetrics: {"project_timestamp"},
