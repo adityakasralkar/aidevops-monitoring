@@ -17,6 +17,7 @@ import (
 	"github.com/adityakasralkar/aidevops-monitoring/server/internal/api"
 	"github.com/adityakasralkar/aidevops-monitoring/server/internal/config"
 	"github.com/adityakasralkar/aidevops-monitoring/server/internal/ingest"
+	"github.com/adityakasralkar/aidevops-monitoring/server/internal/model"
 	"github.com/adityakasralkar/aidevops-monitoring/server/internal/store"
 )
 
@@ -64,19 +65,32 @@ func run() error {
 	defer func() { _ = db.Close(context.Background()) }()
 	logger.Info("connected to mongodb", "database", cfg.MongoDBName)
 
-	// 5. Start the ingest queue: handlers put logs on it and reply at once;
-	// its workers save them to MongoDB in the background.
-	queue, err := ingest.New(ingest.Config{
+	// 5. Start the ingest queues (one for logs, one for metrics): handlers
+	// put items on them and reply at once; workers save them to MongoDB in
+	// the background. Each queue gets the configured capacity and workers.
+	logQueue, err := ingest.New(ingest.Config[model.LogRecord]{
+		Name:     "logs",
 		Capacity: cfg.IngestQueueSize,
 		Workers:  cfg.IngestWorkers,
-		Writer:   db,
+		Write:    ingest.WriteLogs(db),
 		Logger:   logger,
 	})
 	if err != nil {
 		return err
 	}
-	queue.Start()
-	logger.Info("ingest queue started", "capacity", cfg.IngestQueueSize, "workers", cfg.IngestWorkers)
+	metricQueue, err := ingest.New(ingest.Config[model.MetricPoint]{
+		Name:     "metrics",
+		Capacity: cfg.IngestQueueSize,
+		Workers:  cfg.IngestWorkers,
+		Write:    db.InsertMetrics,
+		Logger:   logger,
+	})
+	if err != nil {
+		return err
+	}
+	logQueue.Start()
+	metricQueue.Start()
+	logger.Info("ingest queues started", "capacity", cfg.IngestQueueSize, "workers_each", cfg.IngestWorkers)
 
 	// 6. Create the HTTP server. The timeouts protect against slow or
 	// stuck clients holding connections open forever.
@@ -89,7 +103,8 @@ func run() error {
 			Sessions: db,
 			Projects: db,
 			Keys:     db,
-			Logs:     queue,
+			Logs:     logQueue,
+			Metrics:  metricQueue,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
@@ -123,7 +138,7 @@ func run() error {
 	}
 
 	// 9. Stop cleanly.
-	return errors.Join(startErr, shutdown(logger, srv, queue, db, cfg.ShutdownTimeout))
+	return errors.Join(startErr, shutdown(logger, srv, logQueue, metricQueue, db, cfg.ShutdownTimeout))
 }
 
 // connectDB connects to MongoDB and makes sure collections and indexes exist.
@@ -144,10 +159,16 @@ func connectDB(ctx context.Context, cfg config.Config) (*store.Store, error) {
 	return db, nil
 }
 
+// drainer is a queue that can be emptied on shutdown and report its counters.
+type drainer interface {
+	Drain(ctx context.Context) error
+	Stats() ingest.Stats
+}
+
 // shutdown stops the server in a safe order, within the given time limit:
-// stop taking new requests and let running ones finish, save every log
-// still in the queue, then close the database.
-func shutdown(logger *slog.Logger, srv *http.Server, queue *ingest.Queue, db *store.Store, timeout time.Duration) error {
+// stop taking new requests and let running ones finish, save everything
+// still in the queues, then close the database.
+func shutdown(logger *slog.Logger, srv *http.Server, logQueue, metricQueue drainer, db *store.Store, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -155,12 +176,22 @@ func shutdown(logger *slog.Logger, srv *http.Server, queue *ingest.Queue, db *st
 	if err := srv.Shutdown(ctx); err != nil {
 		errs = append(errs, fmt.Errorf("http shutdown: %w", err))
 	}
-	// No request can add logs now, so drain the queue into MongoDB.
-	if err := queue.Drain(ctx); err != nil {
-		errs = append(errs, fmt.Errorf("ingest drain: %w", err))
+	// No request can add items now, so drain both queues into MongoDB at
+	// the same time (they share the remaining time limit).
+	queues := map[string]drainer{"logs": logQueue, "metrics": metricQueue}
+	drainErrs := make(chan error, len(queues))
+	for _, q := range queues {
+		go func() { drainErrs <- q.Drain(ctx) }()
 	}
-	st := queue.Stats()
-	logger.Info("ingest queue stopped", "accepted", st.Accepted, "saved", st.Saved, "dropped", st.Dropped)
+	for range queues {
+		if err := <-drainErrs; err != nil {
+			errs = append(errs, fmt.Errorf("ingest drain: %w", err))
+		}
+	}
+	for name, q := range queues {
+		st := q.Stats()
+		logger.Info("ingest queue stopped", "queue", name, "accepted", st.Accepted, "saved", st.Saved, "dropped", st.Dropped)
+	}
 
 	if err := db.Close(ctx); err != nil {
 		errs = append(errs, err)

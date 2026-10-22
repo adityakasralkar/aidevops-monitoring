@@ -79,3 +79,35 @@ type LogRecord struct {
 	// DiagnosisStatus is set only for ErrorLogs.
 	DiagnosisStatus string `bson:"diagnosis_status,omitempty"`
 }
+
+// Metric types (Decision #13).
+const (
+	MetricGauge     = "gauge"     // a value right now, e.g. CPU 73%
+	MetricSum       = "sum"       // a running total, e.g. 1532 requests
+	MetricHistogram = "histogram" // a distribution, e.g. response times in buckets
+)
+
+// MetricPoint is one metric measurement, stored in TelemetryMetrics.
+// Gauge and sum use Value; histograms use Count, Sum, Min, Max and the
+// buckets. Pointers distinguish "not sent" from a real zero.
+type MetricPoint struct {
+	ID          bson.ObjectID `bson:"_id"`
+	ProjectID   bson.ObjectID `bson:"project_id"`
+	ServiceName string        `bson:"service_name"`
+	MetricName  string        `bson:"metric_name"`
+	MetricType  string        `bson:"metric_type"`
+	Unit        string        `bson:"unit,omitempty"`
+
+	Value *float64 `bson:"value,omitempty"`
+
+	Count        *int64    `bson:"count,omitempty"`
+	Sum          *float64  `bson:"sum,omitempty"`
+	Min          *float64  `bson:"min,omitempty"`
+	Max          *float64  `bson:"max,omitempty"`
+	BucketBounds []float64 `bson:"bucket_bounds,omitempty"` // upper bounds, increasing
+	BucketCounts []int64   `bson:"bucket_counts,omitempty"` // one more than BucketBounds
+
+	Attributes map[string]any `bson:"attributes,omitempty"`
+	Timestamp  time.Time      `bson:"timestamp"`
+	ReceivedAt time.Time      `bson:"received_at"`
+}

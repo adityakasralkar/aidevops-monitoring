@@ -174,6 +174,29 @@ func (q *fakeQueue) Enqueue(logs []model.LogRecord) error {
 	return nil
 }
 
+// fakeMetricQueue records enqueued metrics; err makes Enqueue fail.
+type fakeMetricQueue struct {
+	mu      sync.Mutex
+	metrics []model.MetricPoint
+	err     error
+}
+
+func (q *fakeMetricQueue) Enqueue(m []model.MetricPoint) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if q.err != nil {
+		return q.err
+	}
+	q.metrics = append(q.metrics, m...)
+	return nil
+}
+
+func (q *fakeMetricQueue) queued() []model.MetricPoint {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return append([]model.MetricPoint(nil), q.metrics...)
+}
+
 func (q *fakeQueue) queued() []model.LogRecord {
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -206,11 +229,12 @@ func (c *fakeClock) Advance(d time.Duration) {
 
 // testEnv bundles a router with its fake store, queue, clock and captured logs.
 type testEnv struct {
-	h     http.Handler
-	store *fakeStore
-	queue *fakeQueue
-	clock *fakeClock
-	logs  *strings.Builder
+	h       http.Handler
+	store   *fakeStore
+	queue   *fakeQueue
+	metrics *fakeMetricQueue
+	clock   *fakeClock
+	logs    *strings.Builder
 }
 
 func newTestEnv(t *testing.T) *testEnv {
@@ -221,8 +245,9 @@ func newTestEnv(t *testing.T) *testEnv {
 	var logMu sync.Mutex
 	logger := slog.New(slog.NewTextHandler(lockedWriter{w: logs, mu: &logMu}, nil))
 	queue := &fakeQueue{}
-	h := NewRouter(Deps{Logger: logger, DB: store, Users: store, Sessions: store, Projects: store, Keys: store, Logs: queue, Now: clock.Now})
-	return &testEnv{h: h, store: store, queue: queue, clock: clock, logs: logs}
+	metrics := &fakeMetricQueue{}
+	h := NewRouter(Deps{Logger: logger, DB: store, Users: store, Sessions: store, Projects: store, Keys: store, Logs: queue, Metrics: metrics, Now: clock.Now})
+	return &testEnv{h: h, store: store, queue: queue, metrics: metrics, clock: clock, logs: logs}
 }
 
 // lockedWriter makes a strings.Builder safe for concurrent log writes.

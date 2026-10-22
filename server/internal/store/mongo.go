@@ -72,9 +72,10 @@ var schema = []struct {
 	{CollAppLogs, []mongo.IndexModel{
 		index("project_timestamp", bson.D{{Key: "project_id", Value: 1}, {Key: "timestamp", Value: -1}}).model(),
 	}},
-	// Latest metrics per project.
+	// Latest metrics per project, and one metric over time (for charts).
 	{CollTelemetryMetrics, []mongo.IndexModel{
 		index("project_timestamp", bson.D{{Key: "project_id", Value: 1}, {Key: "timestamp", Value: -1}}).model(),
+		index("project_metric_timestamp", bson.D{{Key: "project_id", Value: 1}, {Key: "metric_name", Value: 1}, {Key: "timestamp", Value: -1}}).model(),
 	}},
 }
 
