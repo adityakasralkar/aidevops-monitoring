@@ -86,7 +86,7 @@ func TestEnsureSchemaCreatesCollectionsAndIndexes(t *testing.T) {
 		CollApplications:     {"api_key_hash_unique", "owner_project_env_unique", "owner_created"},
 		CollErrorLogs:        {"project_timestamp", "project_diagnosis_status"},
 		CollAppLogs:          {"project_timestamp"},
-		CollTelemetryMetrics: {"project_timestamp"},
+		CollTelemetryMetrics: {"project_timestamp", "project_metric_timestamp"},
 	}
 	for coll, wantIndexes := range want {
 		t.Run(coll, func(t *testing.T) {

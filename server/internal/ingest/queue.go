@@ -1,6 +1,6 @@
-// Package ingest holds the in-memory queue between the HTTP handlers and
-// MongoDB. Handlers put logs on the queue and reply at once; background
-// workers save them in batches, routed by severity.
+// Package ingest holds the in-memory queues between the HTTP handlers and
+// MongoDB. Handlers put items (logs or metrics) on a queue and reply at
+// once; background workers save them in batches.
 package ingest
 
 import (
@@ -11,8 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/adityakasralkar/aidevops-monitoring/server/internal/model"
 )
 
 // Errors returned by Enqueue.
@@ -31,39 +29,36 @@ const (
 // is tried up to 4 times in total over roughly 2.6 seconds.
 var defaultRetryDelays = []time.Duration{100 * time.Millisecond, 500 * time.Millisecond, 2 * time.Second}
 
-// Writer saves logs. The MongoDB Store satisfies it; tests use a fake.
-type Writer interface {
-	InsertErrorLogs(ctx context.Context, logs []model.LogRecord) error
-	InsertAppLogs(ctx context.Context, logs []model.LogRecord) error
-}
-
-// Config sets up a Queue. Capacity, Workers, Writer and Logger are required.
-type Config struct {
-	Capacity      int             // most logs held at once (queued or being written)
-	Workers       int             // number of background writer goroutines
-	Writer        Writer          // where logs are saved
-	Logger        *slog.Logger    // for retry and drop messages
-	MaxWriteBatch int             // most logs per database write; default 500
-	WriteTimeout  time.Duration   // limit for one write attempt; default 10s
-	RetryDelays   []time.Duration // pauses between attempts; default 100ms, 500ms, 2s
+// Config sets up a Queue of items of type T.
+// Name, Capacity, Workers, Write and Logger are required.
+type Config[T any] struct {
+	Name          string                                     // shown in log messages, e.g. "logs"
+	Capacity      int                                        // most items held at once (queued or being written)
+	Workers       int                                        // number of background writer goroutines
+	Write         func(ctx context.Context, items []T) error // saves one batch; must be safe to retry
+	Logger        *slog.Logger                               // for retry and drop messages
+	MaxWriteBatch int                                        // most items per write; default 500
+	WriteTimeout  time.Duration                              // limit for one write attempt; default 10s
+	RetryDelays   []time.Duration                            // pauses between attempts; default 100ms, 500ms, 2s
 }
 
 // Stats are the queue's counters since start.
 type Stats struct {
-	Accepted int64 // logs put on the queue
-	Saved    int64 // logs written to MongoDB
-	Dropped  int64 // logs given up on after all retries (or at shutdown timeout)
-	Queued   int64 // logs currently waiting or being written
+	Accepted int64 // items put on the queue
+	Saved    int64 // items written to MongoDB
+	Dropped  int64 // items given up on after all retries (or at shutdown timeout)
+	Queued   int64 // items currently waiting or being written
 }
 
-// Queue is a bounded, concurrency-safe log queue with background writers.
-type Queue struct {
-	cfg Config
+// Queue is a bounded, concurrency-safe queue of T with background writers.
+// T is the item type, e.g. model.LogRecord or model.MetricPoint.
+type Queue[T any] struct {
+	cfg Config[T]
 
 	// items carries one accepted batch per element. Its buffer is Capacity,
-	// and every batch has at least one log, so a send never blocks once
+	// and every batch has at least one item, so a send never blocks once
 	// room has been reserved in queued.
-	items chan []model.LogRecord
+	items chan []T
 
 	// mu makes Enqueue and Close safe together: Enqueue holds a read lock
 	// while sending, Close takes the write lock before closing items, so a
@@ -85,9 +80,9 @@ type Queue struct {
 }
 
 // New creates a queue. Call Start to begin saving.
-func New(cfg Config) (*Queue, error) {
-	if cfg.Capacity < 1 || cfg.Workers < 1 || cfg.Writer == nil || cfg.Logger == nil {
-		return nil, errors.New("ingest: Capacity, Workers, Writer and Logger are required")
+func New[T any](cfg Config[T]) (*Queue[T], error) {
+	if cfg.Name == "" || cfg.Capacity < 1 || cfg.Workers < 1 || cfg.Write == nil || cfg.Logger == nil {
+		return nil, errors.New("ingest: Name, Capacity, Workers, Write and Logger are required")
 	}
 	if cfg.MaxWriteBatch < 1 {
 		cfg.MaxWriteBatch = defaultMaxWriteBatch
@@ -99,28 +94,28 @@ func New(cfg Config) (*Queue, error) {
 		cfg.RetryDelays = defaultRetryDelays
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Queue{
+	return &Queue[T]{
 		cfg:         cfg,
-		items:       make(chan []model.LogRecord, cfg.Capacity),
+		items:       make(chan []T, cfg.Capacity),
 		writeCtx:    ctx,
 		cancelWrite: cancel,
 	}, nil
 }
 
 // Start launches the worker goroutines.
-func (q *Queue) Start() {
+func (q *Queue[T]) Start() {
 	for range q.cfg.Workers {
 		q.workers.Go(q.work)
 	}
 }
 
-// Capacity returns the most logs the queue can hold.
-func (q *Queue) Capacity() int { return q.cfg.Capacity }
+// Capacity returns the most items the queue can hold.
+func (q *Queue[T]) Capacity() int { return q.cfg.Capacity }
 
-// Enqueue adds a batch of logs. The whole batch is accepted or none of it:
-// it returns ErrQueueFull if there is not room for every log, and
+// Enqueue adds a batch of items. The whole batch is accepted or none of it:
+// it returns ErrQueueFull if there is not room for every item, and
 // ErrClosed once shutdown has started. It never blocks.
-func (q *Queue) Enqueue(batch []model.LogRecord) error {
+func (q *Queue[T]) Enqueue(batch []T) error {
 	n := int64(len(batch))
 	if n == 0 {
 		return nil
@@ -149,11 +144,11 @@ func (q *Queue) Enqueue(batch []model.LogRecord) error {
 	return nil
 }
 
-// Drain stops accepting logs and waits until every queued log has been
+// Drain stops accepting items and waits until every queued item has been
 // saved (or dropped after retries). If ctx ends first, in-flight writes
-// are cancelled, the remaining logs are counted as dropped, and an error
+// are cancelled, the remaining items are counted as dropped, and an error
 // reports how many were lost.
-func (q *Queue) Drain(ctx context.Context) error {
+func (q *Queue[T]) Drain(ctx context.Context) error {
 	q.close()
 
 	done := make(chan struct{})
@@ -168,12 +163,12 @@ func (q *Queue) Drain(ctx context.Context) error {
 	case <-ctx.Done():
 		q.cancelWrite()
 		<-done // workers now fail fast and exit
-		return fmt.Errorf("drain timed out: %d logs dropped in total", q.dropped.Load())
+		return fmt.Errorf("%s drain timed out: %d dropped in total", q.cfg.Name, q.dropped.Load())
 	}
 }
 
 // Stats returns a snapshot of the counters.
-func (q *Queue) Stats() Stats {
+func (q *Queue[T]) Stats() Stats {
 	return Stats{
 		Accepted: q.accepted.Load(),
 		Saved:    q.saved.Load(),
@@ -182,9 +177,9 @@ func (q *Queue) Stats() Stats {
 	}
 }
 
-// close stops new logs from being accepted. Workers keep running until
+// close stops new items from being accepted. Workers keep running until
 // the channel is empty. Calling it more than once is safe.
-func (q *Queue) close() {
+func (q *Queue[T]) close() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	if !q.closed {
@@ -194,62 +189,43 @@ func (q *Queue) close() {
 }
 
 // work is one worker goroutine: it takes batches off the queue, merges
-// whatever else is waiting (up to MaxWriteBatch logs) into one write, and
+// whatever else is waiting (up to MaxWriteBatch items) into one write, and
 // exits when the queue is closed and empty.
-func (q *Queue) work() {
+func (q *Queue[T]) work() {
 	for batch := range q.items {
-		logs := make([]model.LogRecord, 0, max(len(batch), q.cfg.MaxWriteBatch))
-		logs = append(logs, batch...)
+		items := make([]T, 0, max(len(batch), q.cfg.MaxWriteBatch))
+		items = append(items, batch...)
 
 		// Under load, combine more waiting batches into the same write.
-		// Under light load nothing is waiting and the log is saved at once.
+		// Under light load nothing is waiting and the item is saved at once.
 	collect:
-		for len(logs) < q.cfg.MaxWriteBatch {
+		for len(items) < q.cfg.MaxWriteBatch {
 			select {
 			case more, ok := <-q.items:
 				if !ok {
 					break collect
 				}
-				logs = append(logs, more...)
+				items = append(items, more...)
 			default:
 				break collect
 			}
 		}
 
-		q.write(logs)
-		q.queued.Add(-int64(len(logs)))
+		q.writeWithRetry(items)
+		q.queued.Add(-int64(len(items)))
 	}
 }
 
-// write routes logs by severity and saves each group.
-func (q *Queue) write(logs []model.LogRecord) {
-	var errorLogs, appLogs []model.LogRecord
-	for _, l := range logs {
-		if model.IsErrorSeverity(l.Severity) {
-			l.DiagnosisStatus = model.DiagnosisPending
-			errorLogs = append(errorLogs, l)
-		} else {
-			appLogs = append(appLogs, l)
-		}
-	}
-	if len(errorLogs) > 0 {
-		q.writeWithRetry("ErrorLogs", q.cfg.Writer.InsertErrorLogs, errorLogs)
-	}
-	if len(appLogs) > 0 {
-		q.writeWithRetry("AppLogs", q.cfg.Writer.InsertAppLogs, appLogs)
-	}
-}
-
-// writeWithRetry tries to save logs, pausing between attempts. If every
-// attempt fails, the logs are counted as dropped and an error is logged.
-func (q *Queue) writeWithRetry(target string, insert func(context.Context, []model.LogRecord) error, logs []model.LogRecord) {
+// writeWithRetry tries to save items, pausing between attempts. If every
+// attempt fails, the items are counted as dropped and an error is logged.
+func (q *Queue[T]) writeWithRetry(items []T) {
 	var err error
 	for attempt := 0; ; attempt++ {
 		ctx, cancel := context.WithTimeout(q.writeCtx, q.cfg.WriteTimeout)
-		err = insert(ctx, logs)
+		err = q.cfg.Write(ctx, items)
 		cancel()
 		if err == nil {
-			q.saved.Add(int64(len(logs)))
+			q.saved.Add(int64(len(items)))
 			return
 		}
 		if attempt >= len(q.cfg.RetryDelays) || q.writeCtx.Err() != nil {
@@ -258,14 +234,14 @@ func (q *Queue) writeWithRetry(target string, insert func(context.Context, []mod
 
 		delay := q.cfg.RetryDelays[attempt]
 		q.cfg.Logger.Warn("ingest: write failed, retrying",
-			"target", target, "logs", len(logs), "attempt", attempt+1, "retry_in", delay, "error", err)
+			"queue", q.cfg.Name, "items", len(items), "attempt", attempt+1, "retry_in", delay, "error", err)
 		select {
 		case <-time.After(delay):
 		case <-q.writeCtx.Done():
 		}
 	}
 
-	q.dropped.Add(int64(len(logs)))
-	q.cfg.Logger.Error("ingest: dropping logs after failed writes",
-		"target", target, "logs", len(logs), "error", err)
+	q.dropped.Add(int64(len(items)))
+	q.cfg.Logger.Error("ingest: dropping items after failed writes",
+		"queue", q.cfg.Name, "items", len(items), "error", err)
 }

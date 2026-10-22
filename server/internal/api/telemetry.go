@@ -109,7 +109,7 @@ func (s *server) handleLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items, isBatch, msg := splitLogItems(raw)
+	items, isBatch, msg := splitItems(raw, "log")
 	if msg != "" {
 		writeError(w, http.StatusBadRequest, codeValidationFailed, msg)
 		return
@@ -130,53 +130,82 @@ func (s *server) handleLogs(w http.ResponseWriter, r *http.Request) {
 		records[i] = rec
 	}
 
-	switch err := s.Logs.Enqueue(records); {
-	case errors.Is(err, ingest.ErrQueueFull):
-		w.Header().Set("Retry-After", "1")
-		writeError(w, http.StatusServiceUnavailable, codeQueueFull, "server is busy; please retry shortly")
-		return
-	case errors.Is(err, ingest.ErrClosed):
-		w.Header().Set("Retry-After", "5")
-		writeError(w, http.StatusServiceUnavailable, codeShuttingDown, "server is shutting down; please retry shortly")
-		return
-	case err != nil:
-		s.Logger.ErrorContext(r.Context(), "telemetry: enqueue logs", "error", err)
-		writeInternalError(w)
-		return
-	}
-
-	if !isBatch {
-		writeJSON(w, http.StatusAccepted, acceptedResponse{Status: "accepted", ID: records[0].ID.Hex()})
+	if err := s.Logs.Enqueue(records); err != nil {
+		s.writeEnqueueError(w, r, err)
 		return
 	}
 	ids := make([]string, len(records))
 	for i, rec := range records {
 		ids[i] = rec.ID.Hex()
 	}
-	writeJSON(w, http.StatusAccepted, acceptedBatchResponse{Status: "accepted", Count: len(ids), IDs: ids})
+	writeAccepted(w, isBatch, ids)
 }
 
-// splitLogItems turns the body into a list of raw log objects. It returns
-// a non-empty message if the body is neither an object nor a valid array.
-func splitLogItems(raw json.RawMessage) (items []json.RawMessage, isBatch bool, msg string) {
+// splitItems turns the body into a list of raw objects: one object, or the
+// elements of an array of up to maxLogsPerRequest. noun ("log", "metric")
+// is used in messages. It returns a non-empty message if the body is
+// neither an object nor a valid array.
+func splitItems(raw json.RawMessage, noun string) (items []json.RawMessage, isBatch bool, msg string) {
+	notObject := fmt.Sprintf("body must be a %s object or an array of %s objects", noun, noun)
 	trimmed := bytes.TrimSpace(raw)
 	switch {
 	case len(trimmed) > 0 && trimmed[0] == '{':
 		return []json.RawMessage{trimmed}, false, ""
 	case len(trimmed) > 0 && trimmed[0] == '[':
 		if err := json.Unmarshal(trimmed, &items); err != nil {
-			return nil, true, "body must be a log object or an array of log objects"
+			return nil, true, notObject
 		}
 		if len(items) == 0 {
-			return nil, true, "the array of logs must not be empty"
+			return nil, true, fmt.Sprintf("the array of %ss must not be empty", noun)
 		}
 		if len(items) > maxLogsPerRequest {
-			return nil, true, fmt.Sprintf("at most %d logs per request, got %d", maxLogsPerRequest, len(items))
+			return nil, true, fmt.Sprintf("at most %d %ss per request, got %d", maxLogsPerRequest, noun, len(items))
 		}
 		return items, true, ""
 	default:
-		return nil, false, "body must be a log object or an array of log objects"
+		return nil, false, notObject
 	}
+}
+
+// writeEnqueueError sends the response for a failed Enqueue.
+func (s *server) writeEnqueueError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, ingest.ErrQueueFull):
+		w.Header().Set("Retry-After", "1")
+		writeError(w, http.StatusServiceUnavailable, codeQueueFull, "server is busy; please retry shortly")
+	case errors.Is(err, ingest.ErrClosed):
+		w.Header().Set("Retry-After", "5")
+		writeError(w, http.StatusServiceUnavailable, codeShuttingDown, "server is shutting down; please retry shortly")
+	default:
+		s.Logger.ErrorContext(r.Context(), "telemetry: enqueue", "error", err)
+		writeInternalError(w)
+	}
+}
+
+// writeAccepted sends 202 with the id (single item) or ids (batch).
+func writeAccepted(w http.ResponseWriter, isBatch bool, ids []string) {
+	if !isBatch {
+		writeJSON(w, http.StatusAccepted, acceptedResponse{Status: "accepted", ID: ids[0]})
+		return
+	}
+	writeJSON(w, http.StatusAccepted, acceptedBatchResponse{Status: "accepted", Count: len(ids), IDs: ids})
+}
+
+// parseTimestamp reads an optional RFC 3339 timestamp. Empty means now.
+// Times more than maxClockSkew in the future are rejected.
+func parseTimestamp(value string, now time.Time) (time.Time, string) {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return now, ""
+	}
+	t, err := time.Parse(time.RFC3339Nano, v)
+	if err != nil {
+		return time.Time{}, `timestamp must be RFC 3339, e.g. "2026-10-19T10:15:00Z"`
+	}
+	if t.After(now.Add(maxClockSkew)) {
+		return time.Time{}, "timestamp must not be more than 5 minutes in the future"
+	}
+	return t.UTC().Truncate(time.Millisecond), ""
 }
 
 // parseLog decodes and validates one log. It returns a non-empty message
@@ -212,16 +241,9 @@ func parseLog(raw json.RawMessage, projectID bson.ObjectID, now time.Time) (mode
 		return model.LogRecord{}, fmt.Sprintf("stack_trace must be at most %d bytes", maxStackBytes)
 	}
 
-	ts := now
-	if t := strings.TrimSpace(in.Timestamp); t != "" {
-		parsed, err := time.Parse(time.RFC3339Nano, t)
-		if err != nil {
-			return model.LogRecord{}, `timestamp must be RFC 3339, e.g. "2026-10-19T10:15:00Z"`
-		}
-		if parsed.After(now.Add(maxClockSkew)) {
-			return model.LogRecord{}, "timestamp must not be more than 5 minutes in the future"
-		}
-		ts = parsed.UTC().Truncate(time.Millisecond)
+	ts, msg := parseTimestamp(in.Timestamp, now)
+	if msg != "" {
+		return model.LogRecord{}, msg
 	}
 
 	if msg := validateAttributes(in.Attributes); msg != "" {

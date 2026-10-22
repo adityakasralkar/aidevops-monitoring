@@ -60,12 +60,13 @@ func (f *fakeWriter) counts() (errs, apps, writes int) {
 
 func discardLogger() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
 
-func newQueue(t *testing.T, w *fakeWriter, capacity, workers int) *Queue {
+func newQueue(t *testing.T, w *fakeWriter, capacity, workers int) *Queue[model.LogRecord] {
 	t.Helper()
-	q, err := New(Config{
+	q, err := New(Config[model.LogRecord]{
+		Name:        "logs",
 		Capacity:    capacity,
 		Workers:     workers,
-		Writer:      w,
+		Write:       WriteLogs(w),
 		Logger:      discardLogger(),
 		RetryDelays: []time.Duration{time.Millisecond, time.Millisecond, time.Millisecond},
 	})
@@ -83,7 +84,7 @@ func logs(n int, severity string) []model.LogRecord {
 	return out
 }
 
-func drain(t *testing.T, q *Queue) {
+func drain(t *testing.T, q *Queue[model.LogRecord]) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -93,11 +94,13 @@ func drain(t *testing.T, q *Queue) {
 }
 
 func TestNewValidatesConfig(t *testing.T) {
-	bad := []Config{
-		{Capacity: 0, Workers: 1, Writer: &fakeWriter{}, Logger: discardLogger()},
-		{Capacity: 1, Workers: 0, Writer: &fakeWriter{}, Logger: discardLogger()},
-		{Capacity: 1, Workers: 1, Logger: discardLogger()},
-		{Capacity: 1, Workers: 1, Writer: &fakeWriter{}},
+	write := WriteLogs(&fakeWriter{})
+	bad := []Config[model.LogRecord]{
+		{Name: "", Capacity: 1, Workers: 1, Write: write, Logger: discardLogger()},
+		{Name: "logs", Capacity: 0, Workers: 1, Write: write, Logger: discardLogger()},
+		{Name: "logs", Capacity: 1, Workers: 0, Write: write, Logger: discardLogger()},
+		{Name: "logs", Capacity: 1, Workers: 1, Logger: discardLogger()},
+		{Name: "logs", Capacity: 1, Workers: 1, Write: write},
 	}
 	for i, cfg := range bad {
 		if _, err := New(cfg); err == nil {

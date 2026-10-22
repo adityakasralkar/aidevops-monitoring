@@ -56,9 +56,14 @@ type ProjectKeyStore interface {
 	ProjectByAPIKeyHash(ctx context.Context, keyHash string) (model.Project, error)
 }
 
-// LogQueue accepts logs for background saving (the ingest.Queue).
+// LogQueue accepts logs for background saving (an ingest.Queue).
 type LogQueue interface {
 	Enqueue(logs []model.LogRecord) error
+}
+
+// MetricQueue accepts metrics for background saving (an ingest.Queue).
+type MetricQueue interface {
+	Enqueue(metrics []model.MetricPoint) error
 }
 
 // Deps are the things the HTTP handlers need. The real Store satisfies
@@ -71,6 +76,7 @@ type Deps struct {
 	Projects ProjectStore
 	Keys     ProjectKeyStore
 	Logs     LogQueue
+	Metrics  MetricQueue
 	Now      func() time.Time // current time; nil means time.Now
 }
 
@@ -108,6 +114,7 @@ func NewRouter(d Deps) http.Handler {
 	mux.HandleFunc("GET /api/v1/projects", s.requireUser(s.handleListProjects))
 
 	mux.HandleFunc("POST /api/v1/telemetry/logs", s.requireProject(s.handleLogs))
+	mux.HandleFunc("POST /api/v1/telemetry/metrics", s.requireProject(s.handleMetrics))
 	return mux
 }
 
