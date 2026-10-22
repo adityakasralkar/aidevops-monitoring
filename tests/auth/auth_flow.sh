@@ -17,6 +17,8 @@ fi
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 EMAIL="${TEST_USER_EMAIL:?set TEST_USER_EMAIL in .env}"
 PASSWORD="${TEST_USER_PASSWORD:?set TEST_USER_PASSWORD in .env}"
+# Lowercased once here: macOS's bash 3.2 mis-parses quotes nested in "$(...)".
+EMAIL_LOWER="$(printf '%s' "$EMAIL" | tr '[:upper:]' '[:lower:]')"
 CHECK_RATE_LIMIT=false
 [ "${1:-}" = "--rate-limit" ] && CHECK_RATE_LIMIT=true
 
@@ -70,7 +72,7 @@ call POST /api/v1/auth/signup "$(creds "$EMAIL" "$PASSWORD")"
 if [ "$STATUS" = "409" ]; then
   check "signup (account already exists)" 409 '"email_taken"'
 else
-  check "signup" 201 "\"email\":\"$(tr '[:upper:]' '[:lower:]' <<<"$EMAIL")\"" "password"
+  check "signup" 201 "\"email\":\"$EMAIL_LOWER\"" "password"
 fi
 
 call POST /api/v1/auth/signup "$(creds "$EMAIL" "$PASSWORD")"
