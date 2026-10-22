@@ -45,3 +45,37 @@ type Project struct {
 	KeyPrefix   string        `bson:"key_prefix"`
 	CreatedAt   time.Time     `bson:"created_at"`
 }
+
+// Log severities accepted at ingestion.
+const (
+	SeverityInfo     = "INFO"
+	SeverityWarn     = "WARN"
+	SeverityError    = "ERROR"
+	SeverityCritical = "CRITICAL"
+)
+
+// Diagnosis status values for ErrorLogs. Every new error starts as PENDING;
+// the AI layer (later phase) moves it on.
+const DiagnosisPending = "PENDING"
+
+// IsErrorSeverity reports whether a log of this severity belongs in
+// ErrorLogs (ERROR, CRITICAL) rather than AppLogs (INFO, WARN).
+func IsErrorSeverity(severity string) bool {
+	return severity == SeverityError || severity == SeverityCritical
+}
+
+// LogRecord is one log line, stored in ErrorLogs or AppLogs.
+type LogRecord struct {
+	ID          bson.ObjectID  `bson:"_id"`
+	ProjectID   bson.ObjectID  `bson:"project_id"`
+	ServiceName string         `bson:"service_name"`
+	Severity    string         `bson:"severity"`
+	Message     string         `bson:"message"`
+	StackTrace  string         `bson:"stack_trace,omitempty"`
+	Attributes  map[string]any `bson:"attributes,omitempty"`
+	Timestamp   time.Time      `bson:"timestamp"`   // when the event happened (from the sender)
+	ReceivedAt  time.Time      `bson:"received_at"` // when the server accepted it
+
+	// DiagnosisStatus is set only for ErrorLogs.
+	DiagnosisStatus string `bson:"diagnosis_status,omitempty"`
+}

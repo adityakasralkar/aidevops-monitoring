@@ -25,6 +25,10 @@ const (
 // `openssl rand -hex 32` gives a 64-character secret.
 const minAdminSecretLen = 32
 
+// minQueueSize is the smallest INGEST_QUEUE_SIZE allowed: one request may
+// carry up to 500 logs, and a batch must always be able to fit.
+const minQueueSize = 500
+
 // maxDBNameLen is the longest database name MongoDB allows (in bytes).
 const maxDBNameLen = 63
 
@@ -74,7 +78,7 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		MongoURI:        r.mongoURI("MONGO_URI", "mongodb://localhost:27017"),
 		MongoDBName:     r.dbName("MONGO_DB_NAME", "aidevops"),
 		AdminSecret:     r.secret("ADMIN_SECRET", minAdminSecretLen),
-		IngestQueueSize: r.intInRange("INGEST_QUEUE_SIZE", 5000, 1, 1_000_000),
+		IngestQueueSize: r.intInRange("INGEST_QUEUE_SIZE", 5000, minQueueSize, 1_000_000),
 		IngestWorkers:   r.intInRange("INGEST_WORKERS", 4, 1, 256),
 		ShutdownTimeout: r.durationInRange("SHUTDOWN_TIMEOUT", 15*time.Second, time.Second, 5*time.Minute),
 	}

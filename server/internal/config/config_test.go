@@ -117,6 +117,7 @@ func TestLoadInvalid(t *testing.T) {
 		{"rejects a db name with a dot", map[string]string{"MONGO_DB_NAME": "aid.ops"}, "MONGO_DB_NAME: must not contain"},
 		{"rejects a db name over 63 bytes", map[string]string{"MONGO_DB_NAME": strings.Repeat("a", 64)}, "MONGO_DB_NAME: must be at most 63"},
 		{"rejects a zero queue size", map[string]string{"INGEST_QUEUE_SIZE": "0"}, "INGEST_QUEUE_SIZE: must be an integer"},
+		{"rejects a queue smaller than one batch", map[string]string{"INGEST_QUEUE_SIZE": "499"}, "INGEST_QUEUE_SIZE: must be an integer between 500"},
 		{"rejects zero workers", map[string]string{"INGEST_WORKERS": "0"}, "INGEST_WORKERS: must be an integer"},
 		{"rejects a timeout without a unit", map[string]string{"SHUTDOWN_TIMEOUT": "15"}, "SHUTDOWN_TIMEOUT: must be a duration"},
 		{"rejects a negative timeout", map[string]string{"SHUTDOWN_TIMEOUT": "-1s"}, "SHUTDOWN_TIMEOUT: must be a duration"},

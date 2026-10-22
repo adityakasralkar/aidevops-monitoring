@@ -2,9 +2,11 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/adityakasralkar/aidevops-monitoring/server/internal/model"
@@ -45,4 +47,18 @@ func (s *Store) ProjectsByOwner(ctx context.Context, ownerID bson.ObjectID) ([]m
 		return nil, fmt.Errorf("read projects: %w", err)
 	}
 	return projects, nil
+}
+
+// ProjectByAPIKeyHash finds the project that owns an API key.
+// It returns model.ErrNotFound if no project has this key.
+func (s *Store) ProjectByAPIKeyHash(ctx context.Context, keyHash string) (model.Project, error) {
+	var p model.Project
+	err := s.Collection(CollApplications).FindOne(ctx, bson.D{{Key: "api_key_hash", Value: keyHash}}).Decode(&p)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return model.Project{}, model.ErrNotFound
+	}
+	if err != nil {
+		return model.Project{}, fmt.Errorf("find project by key: %w", err)
+	}
+	return p, nil
 }

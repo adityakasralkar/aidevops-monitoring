@@ -51,6 +51,16 @@ type ProjectStore interface {
 	ProjectsByOwner(ctx context.Context, ownerID bson.ObjectID) ([]model.Project, error)
 }
 
+// ProjectKeyStore finds the project that owns an API key.
+type ProjectKeyStore interface {
+	ProjectByAPIKeyHash(ctx context.Context, keyHash string) (model.Project, error)
+}
+
+// LogQueue accepts logs for background saving (the ingest.Queue).
+type LogQueue interface {
+	Enqueue(logs []model.LogRecord) error
+}
+
 // Deps are the things the HTTP handlers need. The real Store satisfies
 // all the store interfaces; tests pass fakes.
 type Deps struct {
@@ -59,6 +69,8 @@ type Deps struct {
 	Users    UserStore
 	Sessions SessionStore
 	Projects ProjectStore
+	Keys     ProjectKeyStore
+	Logs     LogQueue
 	Now      func() time.Time // current time; nil means time.Now
 }
 
@@ -94,6 +106,8 @@ func NewRouter(d Deps) http.Handler {
 
 	mux.HandleFunc("POST /api/v1/projects", s.requireUser(s.handleCreateProject))
 	mux.HandleFunc("GET /api/v1/projects", s.requireUser(s.handleListProjects))
+
+	mux.HandleFunc("POST /api/v1/telemetry/logs", s.requireProject(s.handleLogs))
 	return mux
 }
 

@@ -16,6 +16,7 @@ import (
 
 	"github.com/adityakasralkar/aidevops-monitoring/server/internal/api"
 	"github.com/adityakasralkar/aidevops-monitoring/server/internal/config"
+	"github.com/adityakasralkar/aidevops-monitoring/server/internal/ingest"
 	"github.com/adityakasralkar/aidevops-monitoring/server/internal/store"
 )
 
@@ -63,7 +64,21 @@ func run() error {
 	defer func() { _ = db.Close(context.Background()) }()
 	logger.Info("connected to mongodb", "database", cfg.MongoDBName)
 
-	// 5. Create the HTTP server. The timeouts protect against slow or
+	// 5. Start the ingest queue: handlers put logs on it and reply at once;
+	// its workers save them to MongoDB in the background.
+	queue, err := ingest.New(ingest.Config{
+		Capacity: cfg.IngestQueueSize,
+		Workers:  cfg.IngestWorkers,
+		Writer:   db,
+		Logger:   logger,
+	})
+	if err != nil {
+		return err
+	}
+	queue.Start()
+	logger.Info("ingest queue started", "capacity", cfg.IngestQueueSize, "workers", cfg.IngestWorkers)
+
+	// 6. Create the HTTP server. The timeouts protect against slow or
 	// stuck clients holding connections open forever.
 	srv := &http.Server{
 		Addr: net.JoinHostPort("", strconv.Itoa(cfg.Port)),
@@ -73,6 +88,8 @@ func run() error {
 			Users:    db,
 			Sessions: db,
 			Projects: db,
+			Keys:     db,
+			Logs:     queue,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
@@ -82,7 +99,7 @@ func run() error {
 		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
 	}
 
-	// 6. Start the HTTP server in the background. ListenAndServe blocks
+	// 7. Start the HTTP server in the background. ListenAndServe blocks
 	// until the server stops, so it runs in its own goroutine and reports
 	// its result through the serverErr channel.
 	serverErr := make(chan error, 1)
@@ -91,11 +108,13 @@ func run() error {
 		serverErr <- srv.ListenAndServe()
 	}()
 
-	// 7. Wait for whichever happens first: the server fails, or a stop signal.
+	// 8. Wait for whichever happens first: the server fails, or a stop signal.
+	var startErr error
 	select {
 	case err := <-serverErr:
-		// The server could not start (e.g. port already in use) or stopped by itself.
-		return fmt.Errorf("http server: %w", err)
+		// The server could not start (e.g. port already in use) or stopped
+		// by itself. Still shut down properly so queued logs are saved.
+		startErr = fmt.Errorf("http server: %w", err)
 	case <-ctx.Done():
 		// Restore normal signal handling, so a second Ctrl+C stops the
 		// process immediately if shutdown gets stuck.
@@ -103,8 +122,8 @@ func run() error {
 		logger.Info("shutdown signal received", "timeout", cfg.ShutdownTimeout)
 	}
 
-	// 8. Stop cleanly.
-	return shutdown(logger, srv, db, cfg.ShutdownTimeout)
+	// 9. Stop cleanly.
+	return errors.Join(startErr, shutdown(logger, srv, queue, db, cfg.ShutdownTimeout))
 }
 
 // connectDB connects to MongoDB and makes sure collections and indexes exist.
@@ -126,8 +145,9 @@ func connectDB(ctx context.Context, cfg config.Config) (*store.Store, error) {
 }
 
 // shutdown stops the server in a safe order, within the given time limit:
-// stop taking new requests, let running requests finish, then close the database.
-func shutdown(logger *slog.Logger, srv *http.Server, db *store.Store, timeout time.Duration) error {
+// stop taking new requests and let running ones finish, save every log
+// still in the queue, then close the database.
+func shutdown(logger *slog.Logger, srv *http.Server, queue *ingest.Queue, db *store.Store, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -135,8 +155,13 @@ func shutdown(logger *slog.Logger, srv *http.Server, db *store.Store, timeout ti
 	if err := srv.Shutdown(ctx); err != nil {
 		errs = append(errs, fmt.Errorf("http shutdown: %w", err))
 	}
-	// Later: the ingestion queue will be emptied into MongoDB here,
-	// before the database connection is closed.
+	// No request can add logs now, so drain the queue into MongoDB.
+	if err := queue.Drain(ctx); err != nil {
+		errs = append(errs, fmt.Errorf("ingest drain: %w", err))
+	}
+	st := queue.Stats()
+	logger.Info("ingest queue stopped", "accepted", st.Accepted, "saved", st.Saved, "dropped", st.Dropped)
+
 	if err := db.Close(ctx); err != nil {
 		errs = append(errs, err)
 	}

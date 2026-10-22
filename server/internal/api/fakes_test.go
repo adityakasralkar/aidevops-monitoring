@@ -143,6 +143,43 @@ func (f *fakeStore) ProjectsByOwner(_ context.Context, owner bson.ObjectID) ([]m
 	return out, nil
 }
 
+func (f *fakeStore) ProjectByAPIKeyHash(_ context.Context, hash string) (model.Project, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failWith != nil {
+		return model.Project{}, f.failWith
+	}
+	for _, p := range f.projects {
+		if p.APIKeyHash == hash {
+			return p, nil
+		}
+	}
+	return model.Project{}, model.ErrNotFound
+}
+
+// fakeQueue records enqueued logs; err makes Enqueue fail.
+type fakeQueue struct {
+	mu   sync.Mutex
+	logs []model.LogRecord
+	err  error
+}
+
+func (q *fakeQueue) Enqueue(logs []model.LogRecord) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if q.err != nil {
+		return q.err
+	}
+	q.logs = append(q.logs, logs...)
+	return nil
+}
+
+func (q *fakeQueue) queued() []model.LogRecord {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return append([]model.LogRecord(nil), q.logs...)
+}
+
 func (f *fakeStore) setFail(err error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -167,10 +204,11 @@ func (c *fakeClock) Advance(d time.Duration) {
 	c.t = c.t.Add(d)
 }
 
-// testEnv bundles a router with its fake store, clock and captured logs.
+// testEnv bundles a router with its fake store, queue, clock and captured logs.
 type testEnv struct {
 	h     http.Handler
 	store *fakeStore
+	queue *fakeQueue
 	clock *fakeClock
 	logs  *strings.Builder
 }
@@ -182,8 +220,9 @@ func newTestEnv(t *testing.T) *testEnv {
 	logs := &strings.Builder{}
 	var logMu sync.Mutex
 	logger := slog.New(slog.NewTextHandler(lockedWriter{w: logs, mu: &logMu}, nil))
-	h := NewRouter(Deps{Logger: logger, DB: store, Users: store, Sessions: store, Projects: store, Now: clock.Now})
-	return &testEnv{h: h, store: store, clock: clock, logs: logs}
+	queue := &fakeQueue{}
+	h := NewRouter(Deps{Logger: logger, DB: store, Users: store, Sessions: store, Projects: store, Keys: store, Logs: queue, Now: clock.Now})
+	return &testEnv{h: h, store: store, queue: queue, clock: clock, logs: logs}
 }
 
 // lockedWriter makes a strings.Builder safe for concurrent log writes.
@@ -204,6 +243,7 @@ type request struct {
 	path   string
 	body   string
 	token  string // sent as "Authorization: Bearer <token>" when set
+	apiKey string // sent as "X-API-Key" when set
 	ip     string // client IP; default 192.0.2.1
 	header map[string]string
 }
@@ -220,6 +260,9 @@ func (e *testEnv) do(t *testing.T, req request) *httptest.ResponseRecorder {
 	}
 	if req.token != "" {
 		r.Header.Set("Authorization", "Bearer "+req.token)
+	}
+	if req.apiKey != "" {
+		r.Header.Set("X-API-Key", req.apiKey)
 	}
 	ip := req.ip
 	if ip == "" {

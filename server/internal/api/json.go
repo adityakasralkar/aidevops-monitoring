@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// maxBodyBytes is the largest request body accepted (1 MiB).
+// maxBodyBytes is the largest request body accepted by most endpoints (1 MiB).
 const maxBodyBytes = 1 << 20
 
 // writeJSON sends v as a JSON response with the given status code.
@@ -44,6 +44,11 @@ const (
 	codeInvalidToken       = "invalid_token"
 	codeTooManyRequests    = "too_many_requests"
 	codeProjectExists      = "project_exists"
+	codeMissingAPIKey      = "missing_api_key"
+	codeInvalidAPIKey      = "invalid_api_key"
+	codeEnvMismatch        = "env_mismatch"
+	codeQueueFull          = "queue_full"
+	codeShuttingDown       = "shutting_down"
 	codeInternalError      = "internal_error"
 )
 
@@ -59,21 +64,26 @@ func writeInternalError(w http.ResponseWriter) {
 }
 
 // decodeJSON reads the request body as JSON into dst.
-// It allows exactly one JSON object, rejects unknown fields and bodies over
+// It allows exactly one JSON value, rejects unknown fields and bodies over
 // maxBodyBytes. On failure it writes the error response and returns false.
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
+	return decodeJSONLimit(w, r, dst, maxBodyBytes)
+}
+
+// decodeJSONLimit is decodeJSON with a custom body size limit in bytes.
+func decodeJSONLimit(w http.ResponseWriter, r *http.Request, dst any, limit int64) bool {
 	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || mediaType != "application/json" {
 		writeError(w, http.StatusUnsupportedMediaType, codeInvalidJSON, "Content-Type must be application/json")
 		return false
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 
 	if err := dec.Decode(dst); err != nil {
-		status, msg := describeDecodeError(err)
+		status, msg := describeDecodeError(err, limit)
 		writeError(w, status, codeInvalidJSON, msg)
 		return false
 	}
@@ -87,14 +97,14 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 
 // describeDecodeError turns a JSON decoding error into a status code and a
 // message that is safe and useful to show to the client.
-func describeDecodeError(err error) (int, string) {
+func describeDecodeError(err error, limit int64) (int, string) {
 	var syntaxErr *json.SyntaxError
 	var typeErr *json.UnmarshalTypeError
 	var maxErr *http.MaxBytesError
 
 	switch {
 	case errors.As(err, &maxErr):
-		return http.StatusRequestEntityTooLarge, fmt.Sprintf("request body must not be larger than %d bytes", maxBodyBytes)
+		return http.StatusRequestEntityTooLarge, fmt.Sprintf("request body must not be larger than %d bytes", limit)
 	case errors.Is(err, io.EOF):
 		return http.StatusBadRequest, "request body must not be empty"
 	case errors.Is(err, io.ErrUnexpectedEOF), errors.As(err, &syntaxErr):

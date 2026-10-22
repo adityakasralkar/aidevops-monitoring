@@ -1,5 +1,5 @@
 # Common tasks. Run `make help` for the list.
-.PHONY: help up down logs run test itest authflow fmt vet check
+.PHONY: help up down logs run test itest authflow logflow fmt vet check
 
 help:            ## Show available commands
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-8s %s\n", $$1, $$2}'
@@ -24,6 +24,9 @@ itest:           ## Run integration tests (needs MongoDB: make up)
 
 authflow:        ## End-to-end auth check against a running server (make run)
 	tests/auth/auth_flow.sh
+
+logflow:         ## End-to-end log ingestion check against a running server
+	tests/ingestion/logs.sh
 
 fmt:             ## Format Go code
 	cd server && gofmt -w .
