@@ -59,11 +59,13 @@ type ProjectKeyStore interface {
 // LogQueue accepts logs for background saving (an ingest.Queue).
 type LogQueue interface {
 	Enqueue(logs []model.LogRecord) error
+	Capacity() int
 }
 
 // MetricQueue accepts metrics for background saving (an ingest.Queue).
 type MetricQueue interface {
 	Enqueue(metrics []model.MetricPoint) error
+	Capacity() int
 }
 
 // Deps are the things the HTTP handlers need. The real Store satisfies
@@ -115,6 +117,11 @@ func NewRouter(d Deps) http.Handler {
 
 	mux.HandleFunc("POST /api/v1/telemetry/logs", s.requireProject(s.handleLogs))
 	mux.HandleFunc("POST /api/v1/telemetry/metrics", s.requireProject(s.handleMetrics))
+
+	// OpenTelemetry (OTLP/HTTP) endpoints. SDKs add these paths to the
+	// configured OTEL_EXPORTER_OTLP_ENDPOINT automatically.
+	mux.HandleFunc("POST /v1/logs", s.requireProject(s.handleOTLPLogs))
+	mux.HandleFunc("POST /v1/metrics", s.requireProject(s.handleOTLPMetrics))
 	return mux
 }
 
