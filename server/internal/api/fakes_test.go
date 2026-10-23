@@ -191,11 +191,15 @@ func (q *fakeMetricQueue) Enqueue(m []model.MetricPoint) error {
 	return nil
 }
 
+func (q *fakeMetricQueue) Capacity() int { return 5000 }
+
 func (q *fakeMetricQueue) queued() []model.MetricPoint {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	return append([]model.MetricPoint(nil), q.metrics...)
 }
+
+func (q *fakeQueue) Capacity() int { return 5000 }
 
 func (q *fakeQueue) queued() []model.LogRecord {
 	q.mu.Lock()
