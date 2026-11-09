@@ -40,6 +40,7 @@ const (
 	codeValidationFailed   = "validation_failed"
 	codeEmailTaken         = "email_taken"
 	codeInvalidCredentials = "invalid_credentials"
+	codeWrongPassword      = "wrong_password"
 	codeMissingToken       = "missing_token"
 	codeInvalidToken       = "invalid_token"
 	codeTooManyRequests    = "too_many_requests"

@@ -217,6 +217,95 @@ func (s *server) handleMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, toUserResponse(currentAuth(r).User))
 }
 
+// passwordChange is the request body for changing the password.
+type passwordChange struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+// handleChangePassword sets a new password for the logged-in user.
+// 204 on success · 400 bad input · 403 wrong current password · 429 too many wrong attempts.
+//
+// The current password is asked again so that someone who only has the
+// session (an unlocked laptop, a stolen token) cannot take over the account.
+// Wrong attempts count as failed logins for this account, so the session
+// cannot be used to guess the password either.
+//
+// Afterwards every other session of the user is ended: if the old password
+// had leaked, sessions opened with it stop working. This session stays.
+func (s *server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	a := currentAuth(r)
+	userID := a.User.ID.Hex()
+
+	var req passwordChange
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		writeError(w, http.StatusBadRequest, codeValidationFailed, "current_password and new_password are required")
+		return
+	}
+	if err := auth.ValidatePassword(req.NewPassword); err != nil {
+		writeError(w, http.StatusBadRequest, codeValidationFailed, "new "+err.Error())
+		return
+	}
+
+	emailKey := "email:" + a.User.Email
+	if blocked, retry := s.loginByEmail.blocked(emailKey); blocked {
+		s.Logger.WarnContext(ctx, "change password rate limited", "user_id", userID)
+		writeTooManyRequests(w, retry)
+		return
+	}
+
+	// A password over the limit can never match (signup rejects it), and
+	// bcrypt refuses to compare one, so it is simply a wrong password.
+	err := auth.ErrPasswordMismatch
+	if len(req.CurrentPassword) <= auth.MaxPasswordLen {
+		err = auth.CheckPassword(a.User.PasswordHash, req.CurrentPassword)
+	}
+	if errors.Is(err, auth.ErrPasswordMismatch) {
+		s.loginByEmail.hit(emailKey)
+		s.Logger.InfoContext(ctx, "change password: wrong current password", "user_id", userID)
+		writeError(w, http.StatusForbidden, codeWrongPassword, "current password is wrong")
+		return
+	}
+	if err != nil {
+		s.Logger.ErrorContext(ctx, "change password: check password", "error", err, "user_id", userID)
+		writeInternalError(w)
+		return
+	}
+	// Checked only after the current password is proven, so this answer
+	// cannot be used to test guesses.
+	if req.NewPassword == req.CurrentPassword {
+		writeError(w, http.StatusBadRequest, codeValidationFailed, "new password must be different from the current one")
+		return
+	}
+
+	hash, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		s.Logger.ErrorContext(ctx, "change password: hash password", "error", err, "user_id", userID)
+		writeInternalError(w)
+		return
+	}
+	if err := s.Users.UpdatePassword(ctx, a.User.ID, hash); err != nil {
+		s.Logger.ErrorContext(ctx, "change password: save", "error", err, "user_id", userID)
+		writeInternalError(w)
+		return
+	}
+	s.loginByEmail.reset(emailKey)
+
+	// The password is already changed, so a failure here is logged but the
+	// request still succeeds; the old sessions expire within sessionTTL.
+	ended, err := s.Sessions.DeleteOtherSessions(ctx, a.User.ID, a.TokenHash)
+	if err != nil {
+		s.Logger.ErrorContext(ctx, "change password: end other sessions", "error", err, "user_id", userID)
+	}
+
+	s.Logger.InfoContext(ctx, "password changed", "user_id", userID, "sessions_ended", ended)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // writeTooManyRequests sends 429 with a Retry-After header in whole seconds.
 func writeTooManyRequests(w http.ResponseWriter, retry time.Duration) {
 	secs := int(math.Ceil(retry.Seconds()))

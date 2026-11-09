@@ -63,6 +63,18 @@ func TestUsers(t *testing.T) {
 			t.Errorf("err = %v, want ErrNotFound", err)
 		}
 	})
+	t.Run("updates the password hash", func(t *testing.T) {
+		if err := s.UpdatePassword(ctx, u.ID, "new-hash"); err != nil {
+			t.Fatalf("update: %v", err)
+		}
+		got, _ := s.UserByID(ctx, u.ID)
+		if got.PasswordHash != "new-hash" || got.Email != u.Email {
+			t.Errorf("got %+v", got)
+		}
+		if err := s.UpdatePassword(ctx, bson.NewObjectID(), "x"); !errors.Is(err, model.ErrNotFound) {
+			t.Errorf("unknown user: err = %v, want ErrNotFound", err)
+		}
+	})
 }
 
 func TestSessions(t *testing.T) {
@@ -107,6 +119,28 @@ func TestSessions(t *testing.T) {
 	t.Run("deleting a missing session is not an error", func(t *testing.T) {
 		if err := s.DeleteSession(ctx, "never-existed"); err != nil {
 			t.Errorf("err = %v, want nil", err)
+		}
+	})
+	t.Run("deletes a user's other sessions only", func(t *testing.T) {
+		me, otherUser := bson.NewObjectID(), bson.NewObjectID()
+		for _, sess := range []model.Session{
+			{UserID: me, TokenHash: "keep", CreatedAt: now, ExpiresAt: now.Add(time.Hour)},
+			{UserID: me, TokenHash: "phone", CreatedAt: now, ExpiresAt: now.Add(time.Hour)},
+			{UserID: otherUser, TokenHash: "someone-else", CreatedAt: now, ExpiresAt: now.Add(time.Hour)},
+		} {
+			if err := s.CreateSession(ctx, &sess); err != nil {
+				t.Fatalf("create session: %v", err)
+			}
+		}
+		n, err := s.DeleteOtherSessions(ctx, me, "keep")
+		if err != nil || n != 1 {
+			t.Fatalf("deleted %d, %v; want 1", n, err)
+		}
+		for hash, want := range map[string]bool{"keep": true, "phone": false, "someone-else": true} {
+			_, err := s.SessionByTokenHash(ctx, hash, now)
+			if exists := err == nil; exists != want {
+				t.Errorf("session %q exists = %v, want %v", hash, exists, want)
+			}
 		}
 	})
 }

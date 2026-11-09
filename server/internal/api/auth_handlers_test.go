@@ -394,3 +394,115 @@ type failingDelete struct{ *fakeStore }
 func (failingDelete) DeleteSession(context.Context, string) error {
 	return errDB
 }
+
+func changePassword(current, next string) string {
+	return fmt.Sprintf(`{"current_password":%q,"new_password":%q}`, current, next)
+}
+
+func TestChangePassword(t *testing.T) {
+	t.Parallel()
+	const newPassword = "an0ther-Passw0rd"
+	path := "/api/v1/auth/password"
+
+	t.Run("sets the new password and ends only the other sessions", func(t *testing.T) {
+		e := newTestEnv(t)
+		e.signup(t, testEmail, testPassword)
+		laptop := e.login(t, testEmail, testPassword)
+		phone := e.login(t, testEmail, testPassword)
+
+		rec := e.do(t, request{method: "POST", path: path, token: laptop, body: changePassword(testPassword, newPassword)})
+		if rec.Code != http.StatusNoContent || rec.Body.Len() != 0 {
+			t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
+		}
+		if rec := e.do(t, request{method: "GET", path: "/api/v1/auth/me", token: laptop}); rec.Code != http.StatusOK {
+			t.Errorf("this session: status %d, want it to stay logged in", rec.Code)
+		}
+		if rec := e.do(t, request{method: "GET", path: "/api/v1/auth/me", token: phone}); rec.Code != http.StatusUnauthorized {
+			t.Errorf("other session: status %d, want it logged out", rec.Code)
+		}
+		old := e.do(t, request{method: "POST", path: "/api/v1/auth/login", body: jsonBody(t, credentials{Email: testEmail, Password: testPassword})})
+		wantError(t, old, http.StatusUnauthorized, codeInvalidCredentials)
+		e.login(t, testEmail, newPassword)
+
+		stored, _ := e.store.UserByEmail(t.Context(), testEmail)
+		if stored.PasswordHash == newPassword || auth.CheckPassword(stored.PasswordHash, newPassword) != nil {
+			t.Error("new password not stored as a valid bcrypt hash")
+		}
+		if !strings.Contains(e.logs.String(), "sessions_ended=1") {
+			t.Errorf("log does not say how many sessions ended: %s", e.logs)
+		}
+	})
+
+	t.Run("a wrong current password changes nothing", func(t *testing.T) {
+		e := newTestEnv(t)
+		e.signup(t, testEmail, testPassword)
+		token := e.login(t, testEmail, testPassword)
+		other := e.login(t, testEmail, testPassword)
+
+		rec := e.do(t, request{method: "POST", path: path, token: token, body: changePassword("not-my-password", newPassword)})
+		wantError(t, rec, http.StatusForbidden, codeWrongPassword)
+		e.login(t, testEmail, testPassword)
+		if rec := e.do(t, request{method: "GET", path: "/api/v1/auth/me", token: other}); rec.Code != http.StatusOK {
+			t.Errorf("other session ended after a failed change: %d", rec.Code)
+		}
+	})
+
+	t.Run("too many wrong current passwords are rate limited", func(t *testing.T) {
+		e := newTestEnv(t)
+		e.signup(t, testEmail, testPassword)
+		token := e.login(t, testEmail, testPassword)
+		for range loginFailuresPerEmail {
+			rec := e.do(t, request{method: "POST", path: path, token: token, body: changePassword("wrong-guess-123", newPassword)})
+			wantError(t, rec, http.StatusForbidden, codeWrongPassword)
+		}
+		// Even the right password is refused until the window passes.
+		rec := e.do(t, request{method: "POST", path: path, token: token, body: changePassword(testPassword, newPassword)})
+		wantError(t, rec, http.StatusTooManyRequests, codeTooManyRequests)
+		if rec.Header().Get("Retry-After") == "" {
+			t.Error("missing Retry-After")
+		}
+	})
+
+	validation := []struct{ name, body string }{
+		{"missing fields", `{}`},
+		{"missing new password", changePassword(testPassword, "")},
+		{"new password too short", changePassword(testPassword, "short")},
+		{"new password too long", changePassword(testPassword, strings.Repeat("a", auth.MaxPasswordLen+1))},
+		{"new password same as current", changePassword(testPassword, testPassword)},
+	}
+	for _, tc := range validation {
+		t.Run("rejects "+tc.name, func(t *testing.T) {
+			e := newTestEnv(t)
+			e.signup(t, testEmail, testPassword)
+			token := e.login(t, testEmail, testPassword)
+			rec := e.do(t, request{method: "POST", path: path, token: token, body: tc.body})
+			wantError(t, rec, http.StatusBadRequest, codeValidationFailed)
+		})
+	}
+
+	t.Run("an over-long current password is just wrong", func(t *testing.T) {
+		e := newTestEnv(t)
+		e.signup(t, testEmail, testPassword)
+		token := e.login(t, testEmail, testPassword)
+		rec := e.do(t, request{method: "POST", path: path, token: token, body: changePassword(strings.Repeat("a", 100), newPassword)})
+		wantError(t, rec, http.StatusForbidden, codeWrongPassword)
+	})
+
+	t.Run("needs a session", func(t *testing.T) {
+		e := newTestEnv(t)
+		rec := e.do(t, request{method: "POST", path: path, body: changePassword(testPassword, newPassword)})
+		wantError(t, rec, http.StatusUnauthorized, codeMissingToken)
+	})
+
+	t.Run("returns 500 without leaking details when saving fails", func(t *testing.T) {
+		e := newTestEnv(t)
+		e.signup(t, testEmail, testPassword)
+		token := e.login(t, testEmail, testPassword)
+		e.store.updatePasswordErr = errDB
+		rec := e.do(t, request{method: "POST", path: path, token: token, body: changePassword(testPassword, newPassword)})
+		wantError(t, rec, http.StatusInternalServerError, codeInternalError)
+		if strings.Contains(rec.Body.String(), "mongo-host") {
+			t.Errorf("response leaks internals: %s", rec.Body)
+		}
+	})
+}
