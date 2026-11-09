@@ -28,6 +28,8 @@ type fakeStore struct {
 	pingErr  error
 	failWith error
 	touches  int // calls to TouchProject
+
+	updatePasswordErr error // returned by UpdatePassword only
 }
 
 func newFakeStore() *fakeStore {
@@ -111,6 +113,40 @@ func (f *fakeStore) DeleteSession(_ context.Context, hash string) error {
 	}
 	delete(f.sessions, hash)
 	return nil
+}
+
+func (f *fakeStore) UpdatePassword(_ context.Context, id bson.ObjectID, hash string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failWith != nil {
+		return f.failWith
+	}
+	if f.updatePasswordErr != nil {
+		return f.updatePasswordErr
+	}
+	u, ok := f.users[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	u.PasswordHash = hash
+	f.users[id] = u
+	return nil
+}
+
+func (f *fakeStore) DeleteOtherSessions(_ context.Context, userID bson.ObjectID, keep string) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failWith != nil {
+		return 0, f.failWith
+	}
+	var n int64
+	for hash, s := range f.sessions {
+		if s.UserID == userID && hash != keep {
+			delete(f.sessions, hash)
+			n++
+		}
+	}
+	return n, nil
 }
 
 func (f *fakeStore) CreateProject(_ context.Context, p *model.Project) error {

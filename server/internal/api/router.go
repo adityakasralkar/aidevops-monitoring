@@ -37,6 +37,7 @@ type UserStore interface {
 	CreateUser(ctx context.Context, u *model.User) error
 	UserByEmail(ctx context.Context, email string) (model.User, error)
 	UserByID(ctx context.Context, id bson.ObjectID) (model.User, error)
+	UpdatePassword(ctx context.Context, id bson.ObjectID, passwordHash string) error
 }
 
 // SessionStore reads and writes login sessions.
@@ -44,6 +45,7 @@ type SessionStore interface {
 	CreateSession(ctx context.Context, s *model.Session) error
 	SessionByTokenHash(ctx context.Context, tokenHash string, now time.Time) (model.Session, error)
 	DeleteSession(ctx context.Context, tokenHash string) error
+	DeleteOtherSessions(ctx context.Context, userID bson.ObjectID, keepTokenHash string) (int64, error)
 }
 
 // ProjectStore reads and writes projects.
@@ -128,6 +130,7 @@ func NewRouter(d Deps) http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/login", s.handleLogin)
 	mux.HandleFunc("POST /api/v1/auth/logout", s.requireUser(s.handleLogout))
 	mux.HandleFunc("GET /api/v1/auth/me", s.requireUser(s.handleMe))
+	mux.HandleFunc("POST /api/v1/auth/password", s.requireUser(s.handleChangePassword))
 
 	mux.HandleFunc("POST /api/v1/projects", s.requireUser(s.handleCreateProject))
 	mux.HandleFunc("GET /api/v1/projects", s.requireUser(s.handleListProjects))

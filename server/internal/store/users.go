@@ -37,6 +37,20 @@ func (s *Store) UserByID(ctx context.Context, id bson.ObjectID) (model.User, err
 	return s.findUser(ctx, bson.D{{Key: "_id", Value: id}})
 }
 
+// UpdatePassword replaces a user's password hash.
+// It returns model.ErrNotFound if there is no such user.
+func (s *Store) UpdatePassword(ctx context.Context, id bson.ObjectID, passwordHash string) error {
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "password_hash", Value: passwordHash}}}}
+	res, err := s.Collection(CollUsers).UpdateOne(ctx, bson.D{{Key: "_id", Value: id}}, update)
+	if err != nil {
+		return fmt.Errorf("update password: %w", err)
+	}
+	if res.MatchedCount == 0 {
+		return model.ErrNotFound
+	}
+	return nil
+}
+
 func (s *Store) findUser(ctx context.Context, filter bson.D) (model.User, error) {
 	var u model.User
 	err := s.Collection(CollUsers).FindOne(ctx, filter).Decode(&u)

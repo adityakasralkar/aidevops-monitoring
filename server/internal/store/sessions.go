@@ -52,3 +52,17 @@ func (s *Store) DeleteSession(ctx context.Context, tokenHash string) error {
 	}
 	return nil
 }
+
+// DeleteOtherSessions removes every session of the user except the one with
+// keepTokenHash, and returns how many were removed.
+func (s *Store) DeleteOtherSessions(ctx context.Context, userID bson.ObjectID, keepTokenHash string) (int64, error) {
+	filter := bson.D{
+		{Key: "user_id", Value: userID},
+		{Key: "token_hash", Value: bson.D{{Key: "$ne", Value: keepTokenHash}}},
+	}
+	res, err := s.Collection(CollSessions).DeleteMany(ctx, filter)
+	if err != nil {
+		return 0, fmt.Errorf("delete other sessions: %w", err)
+	}
+	return res.DeletedCount, nil
+}
