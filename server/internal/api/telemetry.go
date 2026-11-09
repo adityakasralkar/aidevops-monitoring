@@ -73,7 +73,27 @@ func (s *server) requireProject(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		s.touchProject(ctx, p.ID)
 		next(w, r.WithContext(context.WithValue(ctx, projectKey{}, p)))
+	}
+}
+
+// touchProject records that the project's key was just used, at most once a
+// minute per project. A failure is only logged: it must never block ingestion.
+func (s *server) touchProject(ctx context.Context, projectID bson.ObjectID) {
+	now := s.now()
+	s.touchMu.Lock()
+	last, seen := s.touched[projectID]
+	due := !seen || now.Sub(last) >= time.Minute
+	if due {
+		s.touched[projectID] = now
+	}
+	s.touchMu.Unlock()
+	if !due {
+		return
+	}
+	if err := s.Keys.TouchProject(ctx, projectID, now); err != nil {
+		s.Logger.WarnContext(ctx, "telemetry: update last used time", "error", err, "project_id", projectID.Hex())
 	}
 }
 

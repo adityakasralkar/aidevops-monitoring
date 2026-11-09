@@ -22,6 +22,18 @@ func (failingProjects) CreateProject(context.Context, *model.Project) error { re
 func (failingProjects) ProjectsByOwner(context.Context, bson.ObjectID) ([]model.Project, error) {
 	return nil, errDB
 }
+func (failingProjects) ProjectByID(context.Context, bson.ObjectID, bson.ObjectID) (model.Project, error) {
+	return model.Project{}, errDB
+}
+func (failingProjects) RenameProject(context.Context, bson.ObjectID, bson.ObjectID, string) error {
+	return errDB
+}
+func (failingProjects) RotateAPIKey(context.Context, bson.ObjectID, bson.ObjectID, string, string, time.Time) error {
+	return errDB
+}
+func (failingProjects) DeleteProject(context.Context, bson.ObjectID, bson.ObjectID) error {
+	return errDB
+}
 
 func TestRateLimiter(t *testing.T) {
 	t.Parallel()

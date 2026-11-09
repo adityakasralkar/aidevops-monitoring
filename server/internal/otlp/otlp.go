@@ -161,12 +161,18 @@ func Metrics(req *colmetricspb.ExportMetricsServiceRequest, projectID bson.Objec
 						res.Points = append(res.Points, numberPoint(base, model.MetricGauge, dp, resAttrs, now))
 					}
 				case m.GetSum() != nil:
+					sumBase := base
+					sumBase.Temporality = temporality(m.GetSum().GetAggregationTemporality())
+					monotonic := m.GetSum().GetIsMonotonic()
+					sumBase.Monotonic = &monotonic
 					for _, dp := range m.GetSum().GetDataPoints() {
-						res.Points = append(res.Points, numberPoint(base, model.MetricSum, dp, resAttrs, now))
+						res.Points = append(res.Points, numberPoint(sumBase, model.MetricSum, dp, resAttrs, now))
 					}
 				case m.GetHistogram() != nil:
+					histBase := base
+					histBase.Temporality = temporality(m.GetHistogram().GetAggregationTemporality())
 					for _, dp := range m.GetHistogram().GetDataPoints() {
-						res.Points = append(res.Points, histogramPoint(base, dp, resAttrs, now))
+						res.Points = append(res.Points, histogramPoint(histBase, dp, resAttrs, now))
 					}
 				case m.GetExponentialHistogram() != nil:
 					res.Rejected += len(m.GetExponentialHistogram().GetDataPoints())
@@ -177,6 +183,18 @@ func Metrics(req *colmetricspb.ExportMetricsServiceRequest, projectID bson.Objec
 		}
 	}
 	return res
+}
+
+// temporality turns the OTLP enum into the stored text ("" if unspecified).
+func temporality(t metricspb.AggregationTemporality) string {
+	switch t {
+	case metricspb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE:
+		return model.TemporalityCumulative
+	case metricspb.AggregationTemporality_AGGREGATION_TEMPORALITY_DELTA:
+		return model.TemporalityDelta
+	default:
+		return ""
+	}
 }
 
 func numberPoint(base model.MetricPoint, kind string, dp *metricspb.NumberDataPoint, resAttrs []*commonpb.KeyValue, now time.Time) model.MetricPoint {
@@ -193,7 +211,17 @@ func numberPoint(base model.MetricPoint, kind string, dp *metricspb.NumberDataPo
 	p.Value = &v
 	p.Attributes = limitAttrs(flatten(resAttrs, dp.GetAttributes()))
 	p.Timestamp = timestamp(dp.GetTimeUnixNano(), 0, now)
+	p.StartTime = startTime(dp.GetStartTimeUnixNano())
 	return p
+}
+
+// startTime converts a series' start time; nil when not sent.
+func startTime(nano uint64) *time.Time {
+	if nano == 0 {
+		return nil
+	}
+	t := time.Unix(0, int64(nano)).UTC().Truncate(time.Millisecond)
+	return &t
 }
 
 func histogramPoint(base model.MetricPoint, dp *metricspb.HistogramDataPoint, resAttrs []*commonpb.KeyValue, now time.Time) model.MetricPoint {
@@ -232,6 +260,7 @@ func histogramPoint(base model.MetricPoint, dp *metricspb.HistogramDataPoint, re
 
 	p.Attributes = limitAttrs(flatten(resAttrs, dp.GetAttributes()))
 	p.Timestamp = timestamp(dp.GetTimeUnixNano(), 0, now)
+	p.StartTime = startTime(dp.GetStartTimeUnixNano())
 	return p
 }
 
