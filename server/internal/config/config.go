@@ -58,6 +58,9 @@ type Config struct {
 	IngestQueueSize int
 	IngestWorkers   int
 	ShutdownTimeout time.Duration
+	// DashboardOrigins are the web addresses (scheme://host:port) of
+	// dashboards allowed to call the API from a browser (CORS).
+	DashboardOrigins []string
 }
 
 // Load reads the settings from the process environment variables.
@@ -72,15 +75,16 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 
 	// Each setting: name, default value, then the allowed values or range.
 	cfg := Config{
-		AppEnv:          r.oneOf("APP_ENV", EnvDevelopment, EnvDevelopment, EnvProduction),
-		Port:            r.intInRange("PORT", 8080, 1, 65535),
-		LogLevel:        r.logLevel("LOG_LEVEL", slog.LevelInfo),
-		MongoURI:        r.mongoURI("MONGO_URI", "mongodb://localhost:27017"),
-		MongoDBName:     r.dbName("MONGO_DB_NAME", "aidevops"),
-		AdminSecret:     r.secret("ADMIN_SECRET", minAdminSecretLen),
-		IngestQueueSize: r.intInRange("INGEST_QUEUE_SIZE", 5000, minQueueSize, 1_000_000),
-		IngestWorkers:   r.intInRange("INGEST_WORKERS", 4, 1, 256),
-		ShutdownTimeout: r.durationInRange("SHUTDOWN_TIMEOUT", 15*time.Second, time.Second, 5*time.Minute),
+		AppEnv:           r.oneOf("APP_ENV", EnvDevelopment, EnvDevelopment, EnvProduction),
+		Port:             r.intInRange("PORT", 8080, 1, 65535),
+		LogLevel:         r.logLevel("LOG_LEVEL", slog.LevelInfo),
+		MongoURI:         r.mongoURI("MONGO_URI", "mongodb://localhost:27017"),
+		MongoDBName:      r.dbName("MONGO_DB_NAME", "aidevops"),
+		AdminSecret:      r.secret("ADMIN_SECRET", minAdminSecretLen),
+		IngestQueueSize:  r.intInRange("INGEST_QUEUE_SIZE", 5000, minQueueSize, 1_000_000),
+		IngestWorkers:    r.intInRange("INGEST_WORKERS", 4, 1, 256),
+		ShutdownTimeout:  r.durationInRange("SHUTDOWN_TIMEOUT", 15*time.Second, time.Second, 5*time.Minute),
+		DashboardOrigins: r.origins("DASHBOARD_ORIGINS", []string{"http://localhost:5173"}),
 	}
 
 	// If any setting was wrong, return all the problems as one error.
@@ -103,6 +107,7 @@ func (c Config) LogValue() slog.Value {
 		slog.Int("ingest_queue_size", c.IngestQueueSize),
 		slog.Int("ingest_workers", c.IngestWorkers),
 		slog.Duration("shutdown_timeout", c.ShutdownTimeout),
+		slog.String("dashboard_origins", strings.Join(c.DashboardOrigins, ",")),
 	)
 }
 
@@ -233,6 +238,33 @@ func (r *reader) dbName(key, def string) string {
 		return def
 	}
 	return v
+}
+
+// origins reads a comma-separated list of web origins such as
+// "http://localhost:5173,https://dash.example.com". Each must be a bare
+// scheme://host[:port] with no path, because browsers send exactly that.
+func (r *reader) origins(key string, def []string) []string {
+	v, ok := r.get(key)
+	if !ok {
+		return def
+	}
+	var out []string
+	for _, part := range strings.Split(v, ",") {
+		o := strings.TrimRight(strings.TrimSpace(part), "/")
+		if o == "" {
+			continue
+		}
+		u, err := url.Parse(o)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" || u.RawQuery != "" {
+			r.fail(key, "each entry must look like http://host:port, got %q", o)
+			return def
+		}
+		out = append(out, u.Scheme+"://"+u.Host)
+	}
+	if len(out) == 0 {
+		return def
+	}
+	return out
 }
 
 // secret requires key to be set and at least minLen characters long.

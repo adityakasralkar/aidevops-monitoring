@@ -103,8 +103,11 @@ func run() error {
 			Sessions: db,
 			Projects: db,
 			Keys:     db,
+			Reader:   db,
 			Logs:     logQueue,
 			Metrics:  metricQueue,
+
+			AllowedOrigins: cfg.DashboardOrigins,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,

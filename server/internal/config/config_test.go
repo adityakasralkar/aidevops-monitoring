@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -29,15 +30,16 @@ func TestLoadValid(t *testing.T) {
 			name: "applies defaults when only the admin secret is set",
 			vars: map[string]string{"ADMIN_SECRET": testSecret},
 			want: Config{
-				AppEnv:          EnvDevelopment,
-				Port:            8080,
-				LogLevel:        slog.LevelInfo,
-				MongoURI:        "mongodb://localhost:27017",
-				MongoDBName:     "aidevops",
-				AdminSecret:     testSecret,
-				IngestQueueSize: 5000,
-				IngestWorkers:   4,
-				ShutdownTimeout: 15 * time.Second,
+				AppEnv:           EnvDevelopment,
+				Port:             8080,
+				LogLevel:         slog.LevelInfo,
+				MongoURI:         "mongodb://localhost:27017",
+				MongoDBName:      "aidevops",
+				AdminSecret:      testSecret,
+				IngestQueueSize:  5000,
+				IngestWorkers:    4,
+				ShutdownTimeout:  15 * time.Second,
+				DashboardOrigins: []string{"http://localhost:5173"},
 			},
 		},
 		{
@@ -52,17 +54,19 @@ func TestLoadValid(t *testing.T) {
 				"INGEST_QUEUE_SIZE": "10000",
 				"INGEST_WORKERS":    "8",
 				"SHUTDOWN_TIMEOUT":  "30s",
+				"DASHBOARD_ORIGINS": " https://dash.example.com/ , http://localhost:3000",
 			},
 			want: Config{
-				AppEnv:          EnvProduction,
-				Port:            9090,
-				LogLevel:        slog.LevelDebug,
-				MongoURI:        "mongodb+srv://user:pass@cluster.example.net",
-				MongoDBName:     "aidevops_prod",
-				AdminSecret:     testSecret,
-				IngestQueueSize: 10000,
-				IngestWorkers:   8,
-				ShutdownTimeout: 30 * time.Second,
+				AppEnv:           EnvProduction,
+				Port:             9090,
+				LogLevel:         slog.LevelDebug,
+				MongoURI:         "mongodb+srv://user:pass@cluster.example.net",
+				MongoDBName:      "aidevops_prod",
+				AdminSecret:      testSecret,
+				IngestQueueSize:  10000,
+				IngestWorkers:    8,
+				ShutdownTimeout:  30 * time.Second,
+				DashboardOrigins: []string{"https://dash.example.com", "http://localhost:3000"},
 			},
 		},
 		{
@@ -74,15 +78,16 @@ func TestLoadValid(t *testing.T) {
 				"APP_ENV":      "   ",
 			},
 			want: Config{
-				AppEnv:          EnvDevelopment,
-				Port:            3000,
-				LogLevel:        slog.LevelWarn,
-				MongoURI:        "mongodb://localhost:27017",
-				MongoDBName:     "aidevops",
-				AdminSecret:     testSecret,
-				IngestQueueSize: 5000,
-				IngestWorkers:   4,
-				ShutdownTimeout: 15 * time.Second,
+				AppEnv:           EnvDevelopment,
+				Port:             3000,
+				LogLevel:         slog.LevelWarn,
+				MongoURI:         "mongodb://localhost:27017",
+				MongoDBName:      "aidevops",
+				AdminSecret:      testSecret,
+				IngestQueueSize:  5000,
+				IngestWorkers:    4,
+				ShutdownTimeout:  15 * time.Second,
+				DashboardOrigins: []string{"http://localhost:5173"},
 			},
 		},
 	}
@@ -93,7 +98,7 @@ func TestLoadValid(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if got != tt.want {
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("got  %#v\nwant %#v", got, tt.want)
 			}
 		})
@@ -121,6 +126,8 @@ func TestLoadInvalid(t *testing.T) {
 		{"rejects zero workers", map[string]string{"INGEST_WORKERS": "0"}, "INGEST_WORKERS: must be an integer"},
 		{"rejects a timeout without a unit", map[string]string{"SHUTDOWN_TIMEOUT": "15"}, "SHUTDOWN_TIMEOUT: must be a duration"},
 		{"rejects a negative timeout", map[string]string{"SHUTDOWN_TIMEOUT": "-1s"}, "SHUTDOWN_TIMEOUT: must be a duration"},
+		{"rejects an origin with a path", map[string]string{"DASHBOARD_ORIGINS": "http://localhost:5173/app"}, "DASHBOARD_ORIGINS: each entry"},
+		{"rejects an origin without a scheme", map[string]string{"DASHBOARD_ORIGINS": "localhost:5173"}, "DASHBOARD_ORIGINS: each entry"},
 		{"rejects a timeout above 5 minutes", map[string]string{"SHUTDOWN_TIMEOUT": "10m"}, "SHUTDOWN_TIMEOUT: must be a duration"},
 	}
 

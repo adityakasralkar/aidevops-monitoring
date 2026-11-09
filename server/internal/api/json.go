@@ -44,6 +44,7 @@ const (
 	codeInvalidToken       = "invalid_token"
 	codeTooManyRequests    = "too_many_requests"
 	codeProjectExists      = "project_exists"
+	codeNotFound           = "not_found"
 	codeMissingAPIKey      = "missing_api_key"
 	codeInvalidAPIKey      = "invalid_api_key"
 	codeEnvMismatch        = "env_mismatch"

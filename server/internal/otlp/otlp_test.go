@@ -208,9 +208,10 @@ func TestMetrics(t *testing.T) {
 	ts := now.Add(-10 * time.Second)
 	req := metricsRequest(
 		&metricspb.Metric{Name: "db_active_connections", Data: &metricspb.Metric_Gauge{Gauge: &metricspb.Gauge{
-			DataPoints: []*metricspb.NumberDataPoint{{TimeUnixNano: nanos(ts), Value: &metricspb.NumberDataPoint_AsInt{AsInt: 42}}},
+			DataPoints: []*metricspb.NumberDataPoint{{StartTimeUnixNano: nanos(ts.Add(-time.Hour)), TimeUnixNano: nanos(ts), Value: &metricspb.NumberDataPoint_AsInt{AsInt: 42}}},
 		}}},
 		&metricspb.Metric{Name: "http.server.requests", Data: &metricspb.Metric_Sum{Sum: &metricspb.Sum{
+			AggregationTemporality: metricspb.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE, IsMonotonic: true,
 			DataPoints: []*metricspb.NumberDataPoint{{TimeUnixNano: nanos(ts), Value: &metricspb.NumberDataPoint_AsDouble{AsDouble: 1532.5}},
 				{TimeUnixNano: nanos(ts), Value: &metricspb.NumberDataPoint_AsDouble{AsDouble: 0}, Attributes: []*commonpb.KeyValue{str("http.route", "/pay")}}},
 		}}},
@@ -234,10 +235,11 @@ func TestMetrics(t *testing.T) {
 	}
 
 	gauge, sum, zero, hist := res.Points[0], res.Points[1], res.Points[2], res.Points[3]
-	if gauge.MetricType != model.MetricGauge || *gauge.Value != 42 || gauge.ServiceName != "api" || gauge.ProjectID != project || !gauge.Timestamp.Equal(ts) {
+	if gauge.MetricType != model.MetricGauge || *gauge.Value != 42 || gauge.ServiceName != "api" || gauge.ProjectID != project || !gauge.Timestamp.Equal(ts) ||
+		gauge.StartTime == nil || !gauge.StartTime.Equal(ts.Add(-time.Hour)) {
 		t.Errorf("gauge = %+v", gauge)
 	}
-	if sum.MetricType != model.MetricSum || *sum.Value != 1532.5 {
+	if sum.MetricType != model.MetricSum || *sum.Value != 1532.5 || sum.Temporality != model.TemporalityCumulative || sum.Monotonic == nil || !*sum.Monotonic {
 		t.Errorf("sum = %+v", sum)
 	}
 	if zero.Value == nil || *zero.Value != 0 || zero.Attributes["http.route"] != "/pay" {

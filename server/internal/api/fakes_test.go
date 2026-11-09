@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -26,6 +27,7 @@ type fakeStore struct {
 	projects []model.Project
 	pingErr  error
 	failWith error
+	touches  int // calls to TouchProject
 }
 
 func newFakeStore() *fakeStore {
@@ -234,6 +236,7 @@ func (c *fakeClock) Advance(d time.Duration) {
 // testEnv bundles a router with its fake store, queue, clock and captured logs.
 type testEnv struct {
 	h       http.Handler
+	reader  *fakeReader
 	store   *fakeStore
 	queue   *fakeQueue
 	metrics *fakeMetricQueue
@@ -250,8 +253,9 @@ func newTestEnv(t *testing.T) *testEnv {
 	logger := slog.New(slog.NewTextHandler(lockedWriter{w: logs, mu: &logMu}, nil))
 	queue := &fakeQueue{}
 	metrics := &fakeMetricQueue{}
-	h := NewRouter(Deps{Logger: logger, DB: store, Users: store, Sessions: store, Projects: store, Keys: store, Logs: queue, Metrics: metrics, Now: clock.Now})
-	return &testEnv{h: h, store: store, queue: queue, metrics: metrics, clock: clock, logs: logs}
+	reader := &fakeReader{errByID: map[bson.ObjectID]model.LogRecord{}}
+	h := NewRouter(Deps{Logger: logger, DB: store, Users: store, Sessions: store, Projects: store, Keys: store, Reader: reader, Logs: queue, Metrics: metrics, Now: clock.Now})
+	return &testEnv{h: h, reader: reader, store: store, queue: queue, metrics: metrics, clock: clock, logs: logs}
 }
 
 // lockedWriter makes a strings.Builder safe for concurrent log writes.
@@ -357,4 +361,160 @@ func wantError(t *testing.T, rec *httptest.ResponseRecorder, status int, code st
 	if e.Error.Message == "" {
 		t.Error("error message is empty")
 	}
+}
+
+func (f *fakeStore) findProject(owner, id bson.ObjectID) (int, bool) {
+	for i, p := range f.projects {
+		if p.ID == id && p.OwnerID == owner {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+func (f *fakeStore) ProjectByID(_ context.Context, owner, id bson.ObjectID) (model.Project, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failWith != nil {
+		return model.Project{}, f.failWith
+	}
+	i, ok := f.findProject(owner, id)
+	if !ok {
+		return model.Project{}, model.ErrNotFound
+	}
+	p := f.projects[i]
+	p.APIKeyHash = ""
+	return p, nil
+}
+
+func (f *fakeStore) RenameProject(_ context.Context, owner, id bson.ObjectID, name string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failWith != nil {
+		return f.failWith
+	}
+	i, ok := f.findProject(owner, id)
+	if !ok {
+		return model.ErrNotFound
+	}
+	for j, other := range f.projects {
+		if j != i && other.OwnerID == owner && other.Name == name && other.Environment == f.projects[i].Environment {
+			return model.ErrProjectExists
+		}
+	}
+	f.projects[i].Name = name
+	return nil
+}
+
+func (f *fakeStore) RotateAPIKey(_ context.Context, owner, id bson.ObjectID, hash, prefix string, now time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failWith != nil {
+		return f.failWith
+	}
+	i, ok := f.findProject(owner, id)
+	if !ok {
+		return model.ErrNotFound
+	}
+	f.projects[i].APIKeyHash, f.projects[i].KeyPrefix = hash, prefix
+	f.projects[i].KeyCreatedAt, f.projects[i].LastUsedAt = &now, nil
+	return nil
+}
+
+func (f *fakeStore) DeleteProject(_ context.Context, owner, id bson.ObjectID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failWith != nil {
+		return f.failWith
+	}
+	i, ok := f.findProject(owner, id)
+	if !ok {
+		return model.ErrNotFound
+	}
+	f.projects = append(f.projects[:i], f.projects[i+1:]...)
+	return nil
+}
+
+func (f *fakeStore) TouchProject(_ context.Context, id bson.ObjectID, now time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.touches++
+	for i := range f.projects {
+		if f.projects[i].ID == id {
+			f.projects[i].LastUsedAt = &now
+		}
+	}
+	return nil
+}
+
+// fakeReader returns prepared telemetry and records the last queries.
+type fakeReader struct {
+	mu        sync.Mutex
+	services  []model.ServiceInfo
+	logs      []model.LogRecord
+	errByID   map[bson.ObjectID]model.LogRecord
+	total     int64
+	pending   int64
+	catalog   []model.MetricInfo
+	points    []model.MetricPoint
+	truncated bool
+	failWith  error
+
+	lastLogQuery    model.LogQuery
+	logQueries      []model.LogQuery
+	lastMetricQuery model.MetricQuery
+}
+
+func (f *fakeReader) Services(_ context.Context, _ bson.ObjectID, _ time.Time) ([]model.ServiceInfo, error) {
+	return f.services, f.failWith
+}
+
+func (f *fakeReader) Logs(_ context.Context, q model.LogQuery) ([]model.LogRecord, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.lastLogQuery = q
+	f.logQueries = append(f.logQueries, q)
+	if f.failWith != nil {
+		return nil, f.failWith
+	}
+	out := f.logs
+	if q.Limit > 0 && len(out) > q.Limit {
+		out = out[:q.Limit]
+	}
+	return out, nil
+}
+
+func (f *fakeReader) ErrorByID(_ context.Context, _ bson.ObjectID, id bson.ObjectID) (model.LogRecord, error) {
+	if f.failWith != nil {
+		return model.LogRecord{}, f.failWith
+	}
+	e, ok := f.errByID[id]
+	if !ok {
+		return model.LogRecord{}, model.ErrNotFound
+	}
+	return e, nil
+}
+
+func (f *fakeReader) CountErrors(context.Context, bson.ObjectID, time.Time) (int64, int64, error) {
+	return f.total, f.pending, f.failWith
+}
+
+func (f *fakeReader) MetricCatalog(context.Context, bson.ObjectID, time.Time) ([]model.MetricInfo, error) {
+	return f.catalog, f.failWith
+}
+
+func (f *fakeReader) MetricPoints(_ context.Context, q model.MetricQuery) ([]model.MetricPoint, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.lastMetricQuery = q
+	if f.failWith != nil {
+		return nil, false, f.failWith
+	}
+	var out []model.MetricPoint
+	for _, p := range f.points {
+		if (len(q.Names) == 0 || slices.Contains(q.Names, p.MetricName)) && (q.Service == "" || q.Service == p.ServiceName) {
+			out = append(out, p)
+		}
+	}
+	return out, f.truncated, nil
 }

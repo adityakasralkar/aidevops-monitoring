@@ -5,6 +5,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -49,11 +50,16 @@ type SessionStore interface {
 type ProjectStore interface {
 	CreateProject(ctx context.Context, p *model.Project) error
 	ProjectsByOwner(ctx context.Context, ownerID bson.ObjectID) ([]model.Project, error)
+	ProjectByID(ctx context.Context, ownerID, projectID bson.ObjectID) (model.Project, error)
+	RenameProject(ctx context.Context, ownerID, projectID bson.ObjectID, name string) error
+	RotateAPIKey(ctx context.Context, ownerID, projectID bson.ObjectID, keyHash, keyPrefix string, now time.Time) error
+	DeleteProject(ctx context.Context, ownerID, projectID bson.ObjectID) error
 }
 
 // ProjectKeyStore finds the project that owns an API key.
 type ProjectKeyStore interface {
 	ProjectByAPIKeyHash(ctx context.Context, keyHash string) (model.Project, error)
+	TouchProject(ctx context.Context, projectID bson.ObjectID, now time.Time) error
 }
 
 // LogQueue accepts logs for background saving (an ingest.Queue).
@@ -77,9 +83,14 @@ type Deps struct {
 	Sessions SessionStore
 	Projects ProjectStore
 	Keys     ProjectKeyStore
+	Reader   TelemetryReader
 	Logs     LogQueue
 	Metrics  MetricQueue
 	Now      func() time.Time // current time; nil means time.Now
+
+	// AllowedOrigins are the dashboard origins allowed to call the API
+	// from a browser (CORS). Empty means no browser access.
+	AllowedOrigins []string
 }
 
 // server holds the dependencies and rate limiters shared by all handlers.
@@ -87,7 +98,12 @@ type server struct {
 	Deps
 	loginByEmail *rateLimiter
 	loginByIP    *rateLimiter
-	signupByIP   *rateLimiter
+
+	// touched remembers when each project's last-used time was written, so
+	// ingestion updates it at most once a minute per project.
+	touchMu    sync.Mutex
+	touched    map[bson.ObjectID]time.Time
+	signupByIP *rateLimiter
 }
 
 // NewRouter returns the HTTP handler with all routes registered.
@@ -100,6 +116,7 @@ func NewRouter(d Deps) http.Handler {
 		loginByEmail: newRateLimiter(loginFailuresPerEmail, loginWindow, d.Now),
 		loginByIP:    newRateLimiter(loginFailuresPerIP, loginWindow, d.Now),
 		signupByIP:   newRateLimiter(signupsPerIP, signupWindow, d.Now),
+		touched:      make(map[bson.ObjectID]time.Time),
 	}
 
 	// Patterns like "GET /healthz" only match that method (GET also matches
@@ -114,6 +131,19 @@ func NewRouter(d Deps) http.Handler {
 
 	mux.HandleFunc("POST /api/v1/projects", s.requireUser(s.handleCreateProject))
 	mux.HandleFunc("GET /api/v1/projects", s.requireUser(s.handleListProjects))
+	mux.HandleFunc("GET /api/v1/projects/{id}", s.requireUser(s.handleGetProject))
+	mux.HandleFunc("PATCH /api/v1/projects/{id}", s.requireUser(s.handleRenameProject))
+	mux.HandleFunc("DELETE /api/v1/projects/{id}", s.requireUser(s.handleDeleteProject))
+	mux.HandleFunc("POST /api/v1/projects/{id}/api-key", s.requireUser(s.handleRotateAPIKey))
+
+	// Dashboard reads: a project's services, health, logs, errors and metrics.
+	mux.HandleFunc("GET /api/v1/projects/{id}/services", s.requireUser(s.handleServices))
+	mux.HandleFunc("GET /api/v1/projects/{id}/overview", s.requireUser(s.handleOverview))
+	mux.HandleFunc("GET /api/v1/projects/{id}/logs", s.requireUser(s.handleListLogs))
+	mux.HandleFunc("GET /api/v1/projects/{id}/errors", s.requireUser(s.handleListErrors))
+	mux.HandleFunc("GET /api/v1/projects/{id}/errors/{errorId}", s.requireUser(s.handleErrorDetail))
+	mux.HandleFunc("GET /api/v1/projects/{id}/metrics", s.requireUser(s.handleMetricCatalog))
+	mux.HandleFunc("GET /api/v1/projects/{id}/metrics/series", s.requireUser(s.handleMetricSeries))
 
 	mux.HandleFunc("POST /api/v1/telemetry/logs", s.requireProject(s.handleLogs))
 	mux.HandleFunc("POST /api/v1/telemetry/metrics", s.requireProject(s.handleMetrics))
@@ -122,7 +152,7 @@ func NewRouter(d Deps) http.Handler {
 	// configured OTEL_EXPORTER_OTLP_ENDPOINT automatically.
 	mux.HandleFunc("POST /v1/logs", s.requireProject(s.handleOTLPLogs))
 	mux.HandleFunc("POST /v1/metrics", s.requireProject(s.handleOTLPMetrics))
-	return mux
+	return withCORS(d.AllowedOrigins, mux)
 }
 
 // now returns the current time in UTC, rounded down to the millisecond,
