@@ -141,6 +141,7 @@ func NewRouter(d Deps) http.Handler {
 
 	// Dashboard reads: a project's services, health, logs, errors and metrics.
 	mux.HandleFunc("GET /api/v1/projects/{id}/services", s.requireUser(s.handleServices))
+	mux.HandleFunc("GET /api/v1/projects/{id}/pipelines", s.requireUser(s.handlePipelines))
 	mux.HandleFunc("GET /api/v1/projects/{id}/overview", s.requireUser(s.handleOverview))
 	mux.HandleFunc("GET /api/v1/projects/{id}/logs", s.requireUser(s.handleListLogs))
 	mux.HandleFunc("GET /api/v1/projects/{id}/errors", s.requireUser(s.handleListErrors))

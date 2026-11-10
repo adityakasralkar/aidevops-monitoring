@@ -184,3 +184,34 @@ func TestReadMetrics(t *testing.T) {
 		}
 	})
 }
+
+func TestCILogs(t *testing.T) {
+	s := newSchemaStore(t)
+	ctx := testCtx(t)
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	project := bson.NewObjectID()
+	ci := map[string]any{"ci.run.id": "42", "vcs.branch": "main"}
+
+	errLog := logAt(project, "shop-ci", model.SeverityCritical, "pipeline failed", now.Add(-time.Minute), ci)
+	errLog.DiagnosisStatus = model.DiagnosisPending
+	if err := s.InsertErrorLogs(ctx, []model.LogRecord{errLog}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.InsertAppLogs(ctx, []model.LogRecord{
+		logAt(project, "shop-ci", model.SeverityInfo, "pipeline passed", now.Add(-2*time.Minute), ci),
+		logAt(project, "order-api", model.SeverityInfo, "not from CI", now, map[string]any{"http.route": "/"}),
+		logAt(project, "order-api", model.SeverityInfo, "no attributes", now, nil),
+		logAt(project, "shop-ci", model.SeverityInfo, "too old", now.Add(-48*time.Hour), ci),
+		logAt(bson.NewObjectID(), "shop-ci", model.SeverityInfo, "other project", now, ci),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := s.CILogs(ctx, project, now.Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Message != "pipeline failed" || got[1].Message != "pipeline passed" {
+		t.Errorf("got %+v", got)
+	}
+}
