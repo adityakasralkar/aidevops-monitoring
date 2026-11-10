@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router'
 import { AppShell } from './components/layout/AppShell'
+import { AccountPage } from './pages/AccountPage'
 import { RootLayout } from './components/layout/RootLayout'
 import { parseLoginSearch, requireSession, skipLoginWhenSignedIn } from './features/auth/session'
 import { parseErrorSearch } from './features/errors/filters'
@@ -60,12 +61,7 @@ const shellRoute = createRoute({
   component: AppShell,
 })
 
-const accountRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: 'account',
-  component: PlaceholderPage,
-  staticData: { title: 'Account' },
-})
+const accountRoute = createRoute({ getParentRoute: () => shellRoute, path: 'account', component: AccountPage })
 
 const projectRoute = createRoute({ getParentRoute: () => shellRoute, path: 'p/$projectId', component: ProjectGate })
 
