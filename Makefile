@@ -1,5 +1,5 @@
 # Common tasks. Run `make help` for the list.
-.PHONY: help up down logs run demo test itest authflow logflow metricflow fmt vet check
+.PHONY: help up down logs run dashboard demo test itest authflow logflow metricflow fmt vet check
 
 help:            ## Show available commands
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-8s %s\n", $$1, $$2}'
@@ -15,6 +15,9 @@ logs:            ## Follow container logs
 
 run:             ## Run the Go server locally (loads .env if present)
 	set -a; [ ! -f .env ] || . ./.env; set +a; cd server && go run ./cmd/server
+
+dashboard:       ## Run the dashboard on http://localhost:5173 (installs packages the first time)
+	cd dashboard && ([ -d node_modules ] || npm ci) && npm run dev
 
 demo:            ## Guided live demo, one step per Enter (server must be running)
 	tests/demo.sh

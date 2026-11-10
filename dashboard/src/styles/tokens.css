@@ -1,0 +1,86 @@
+/*
+ * Glass design tokens. The only place in the app with raw colour values;
+ * components use these variables instead.
+ */
+:root {
+  /* Text and brand */
+  --graphite: #121412;
+  --text-2: #4a4d47;
+  --text-muted: #5b5e57;
+  --text-faint: #6b6e67;
+  --placeholder: #b9bcb4;
+  --white: #ffffff;
+
+  /* Accent */
+  --lime: #c5f04a;
+  --lime-soft: #eef8d2;
+  --lime-ink: #3f5a0a;
+
+  /* Status */
+  --ok: #8bc21a;
+  --error: #e2622f;
+  --error-text: #b4441c;
+  --error-ink: #8a3412;
+  --error-soft: #fbe7dc;
+  --critical: #7a2a12;
+  --warn: #c99a2e;
+  --neutral-dot: #a3a69e;
+
+  /* Code blocks */
+  --code-bg: #121412;
+  --code-text: #e8eae4;
+
+  /* Page background: a soft colour wash behind the glass panels */
+  --page-base: #f5f5f2;
+  --wash-lime: #eaf5cf;
+  --wash-blue: #e2eaf4;
+  --wash-sand: #f3ece2;
+
+  /* Glass surfaces */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-strong: rgba(255, 255, 255, 0.75);
+  --glass-hover: rgba(255, 255, 255, 0.5);
+  --hairline-soft: rgba(18, 20, 18, 0.08);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.85);
+  --glass-blur: blur(18px);
+  --glass-shadow: 0 1px 2px rgba(18, 20, 18, 0.04), 0 10px 30px rgba(18, 20, 18, 0.05);
+  --hairline: rgba(18, 20, 18, 0.06);
+  --hairline-strong: rgba(18, 20, 18, 0.07);
+  --control-border: rgba(18, 20, 18, 0.12);
+  --raised-shadow: 0 1px 2px rgba(18, 20, 18, 0.06);
+
+  /* Type */
+  --font-ui: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-base: 14px;
+  --text-brand: 15px;
+  --text-lg: 17px;
+  --text-title: 22px;
+  --text-kpi: 24px;
+
+  /* Spacing */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 16px;
+  --space-8: 20px;
+  --space-9: 24px;
+
+  /* Shape */
+  --radius-pill: 4px;
+  --radius-control: 8px;
+  --radius-inner: 10px;
+  --radius-panel: 14px;
+  --radius-round: 999px;
+
+  /* Sizes */
+  --sidebar-width: 240px;
+  --control-height: 40px;
+  --control-height-sm: 36px;
+}
