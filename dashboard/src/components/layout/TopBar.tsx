@@ -1,12 +1,12 @@
 import { Link } from '@tanstack/react-router'
+import { useSessionUser } from '../../features/auth/queries'
 import { useLogout } from '../../features/auth/useLogout'
-import { useAppSelector } from '../../store'
 import { Brand } from './Brand'
 import styles from './TopBar.module.css'
 
 /** Header for pages without a project open (the Projects list). */
 export function TopBar() {
-  const email = useAppSelector((state) => state.auth.user?.email)
+  const email = useSessionUser()?.email
   const logOut = useLogout()
 
   return (

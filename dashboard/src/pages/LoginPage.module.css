@@ -1,15 +1,28 @@
 .page {
   min-height: 100vh;
-  padding: var(--space-6);
+  padding: var(--space-7);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-7);
+}
+
+.formSide {
+  flex: 1 1 520px;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 32px var(--space-4);
 }
 
-.card {
-  width: 100%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
+/* Narrow screens: the form comes first, the brand panel below it. */
+@media (max-width: 760px) {
+  .page {
+    padding: var(--space-6);
+  }
+
+  .formSide {
+    order: -1;
+    padding: var(--space-4) 0;
+  }
 }

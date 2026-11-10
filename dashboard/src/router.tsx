@@ -1,18 +1,20 @@
-import { createRootRoute, createRoute, createRouter, Outlet, redirect } from '@tanstack/react-router'
+import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router'
 import { AppShell } from './components/layout/AppShell'
+import { RootLayout } from './components/layout/RootLayout'
+import { parseLoginSearch, requireSession, skipLoginWhenSignedIn } from './features/auth/session'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 
 // Code-based route tree. URL map:
-//   /login                 log in / sign up
-//   /projects              project list
-//   /account               your account (inside the sidebar layout)
-//   /p/$projectId[/page]   one project's pages (inside the sidebar layout)
+//   /login                 log in / sign up (?expired=true&redirect=/path)
+//   /projects              project list                  (signed in)
+//   /account               your account                  (signed in, sidebar layout)
+//   /p/$projectId[/page]   one project's pages           (signed in, sidebar layout)
 
 const rootRoute = createRootRoute({
-  component: Outlet,
+  component: RootLayout,
   notFoundComponent: NotFoundPage,
 })
 
@@ -24,11 +26,28 @@ const indexRoute = createRoute({
   },
 })
 
-const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: 'login', component: LoginPage })
-const projectsRoute = createRoute({ getParentRoute: () => rootRoute, path: 'projects', component: ProjectsPage })
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'login',
+  validateSearch: parseLoginSearch,
+  beforeLoad: skipLoginWhenSignedIn,
+  component: LoginPage,
+})
 
-// Pathless layout route: everything below it gets the sidebar.
-const shellRoute = createRoute({ getParentRoute: () => rootRoute, id: 'shell', component: AppShell })
+const projectsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'projects',
+  beforeLoad: requireSession,
+  component: ProjectsPage,
+})
+
+// Pathless layout route: everything below it gets the sidebar and needs a session.
+const shellRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'shell',
+  beforeLoad: requireSession,
+  component: AppShell,
+})
 
 const accountRoute = createRoute({
   getParentRoute: () => shellRoute,
