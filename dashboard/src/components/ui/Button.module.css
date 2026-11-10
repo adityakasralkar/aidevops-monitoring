@@ -29,3 +29,9 @@
 .full {
   width: 100%;
 }
+
+@media (max-width: 767px) {
+  .button {
+    height: 44px;
+  }
+}

@@ -2,27 +2,47 @@
   min-height: 100vh;
   padding: var(--space-7);
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-7);
 }
 
+.page > section {
+  flex: 1 1 0;
+}
+
 .formSide {
-  flex: 1 1 520px;
+  flex: 1 1 0;
   min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--space-9);
   padding: 32px var(--space-4);
 }
 
-/* Narrow screens: the form comes first, the brand panel below it. */
-@media (max-width: 760px) {
+/* Shown instead of the dark panel on smaller screens. */
+.compactBrand {
+  display: none;
+}
+
+/* Tablet and phone: no dark panel; the wordmark sits above the form. */
+@media (max-width: 1023px) {
+  .page > section {
+    display: none;
+  }
+
+  .compactBrand {
+    display: block;
+  }
+}
+
+@media (max-width: 767px) {
   .page {
-    padding: var(--space-6);
+    padding: var(--space-7);
   }
 
   .formSide {
-    order: -1;
-    padding: var(--space-4) 0;
+    justify-content: flex-start;
+    padding: var(--space-9) 0;
   }
 }

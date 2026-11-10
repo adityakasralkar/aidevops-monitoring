@@ -1,6 +1,8 @@
 import { Link, useParams } from '@tanstack/react-router'
+import type { Ref } from 'react'
 import {
   ChevronsUpDownIcon,
+  CloseIcon,
   ConnectIcon,
   ErrorsIcon,
   LogsIcon,
@@ -23,21 +25,34 @@ const projectNav = [
   { to: '/p/$projectId/settings', label: 'Settings', Icon: SettingsIcon, exact: false },
 ] as const
 
+export const SIDEBAR_ID = 'main-nav'
+
+interface SidebarProps {
+  /** Phone only: the drawer is showing. */
+  open: boolean
+  /** Phone only: close the drawer (after a link tap or the close button). */
+  onClose: () => void
+  closeButtonRef?: Ref<HTMLButtonElement>
+}
+
 /**
- * Sticky sidebar: brand, project switcher, the project's pages and the user
- * card. Project links only show while a project is open.
+ * Brand, project switcher, the project's pages and the user card.
+ * Desktop: sticky panel. Tablet: icon rail. Phone: slide-in drawer.
  */
-export function Sidebar() {
+export function Sidebar({ open, onClose, closeButtonRef }: SidebarProps) {
   const { projectId } = useParams({ strict: false })
 
   return (
-    <nav aria-label="Main" className={styles.sidebar}>
-      <div className={styles.brand}>
-        <Brand />
+    <nav id={SIDEBAR_ID} aria-label="Main" className={open ? `${styles.sidebar} ${styles.open}` : styles.sidebar}>
+      <div className={styles.brandRow}>
+        <Brand collapsible />
+        <button ref={closeButtonRef} type="button" className={styles.close} onClick={onClose} aria-label="Close menu">
+          <CloseIcon size={18} />
+        </button>
       </div>
 
-      <Link to="/projects" className={styles.switcher}>
-        <span className={styles.switcherLabel}>{projectId ? 'Switch project' : 'All projects'}</span>
+      <Link to="/projects" className={styles.switcher} title="Switch project" onClick={onClose}>
+        <span className={styles.label}>{projectId ? 'Switch project' : 'All projects'}</span>
         <ChevronsUpDownIcon size={14} className={styles.switcherIcon} />
       </Link>
 
@@ -45,9 +60,16 @@ export function Sidebar() {
         <ul className={styles.links}>
           {projectNav.map(({ to, label, Icon, exact }) => (
             <li key={to}>
-              <Link to={to} params={{ projectId }} activeOptions={{ exact }} className={styles.link}>
+              <Link
+                to={to}
+                params={{ projectId }}
+                activeOptions={{ exact }}
+                className={styles.link}
+                title={label}
+                onClick={onClose}
+              >
                 <Icon />
-                {label}
+                <span className={styles.label}>{label}</span>
               </Link>
             </li>
           ))}

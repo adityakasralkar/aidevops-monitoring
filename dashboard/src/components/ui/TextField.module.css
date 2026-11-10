@@ -37,3 +37,10 @@
   font-size: var(--text-sm);
   color: var(--error-text);
 }
+
+@media (max-width: 767px) {
+  .input {
+    font-size: 16px;
+    height: 44px;
+  }
+}
