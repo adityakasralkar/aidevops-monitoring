@@ -43,3 +43,44 @@ export function dateTime(value: string): string {
     minute: '2-digit',
   }).format(new Date(value))
 }
+
+const integer = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 })
+const oneDecimal = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 })
+
+/** 1248 → "1,248"; 12500 → "12.5k"; 2300000 → "2.3M". */
+export function compactNumber(value: number): string {
+  const abs = Math.abs(value)
+  if (abs >= 1_000_000) return `${oneDecimal.format(value / 1_000_000)}M`
+  if (abs >= 10_000) return `${oneDecimal.format(value / 1_000)}k`
+  if (abs >= 10) return integer.format(value)
+  return oneDecimal.format(value)
+}
+
+/** Latency: 0.4 → "0.4 ms", 840 → "840 ms", 1500 → "1.5 s". */
+export function ms(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—'
+  if (value >= 1000) return `${oneDecimal.format(value / 1000)} s`
+  if (value >= 10) return `${integer.format(value)} ms`
+  return `${oneDecimal.format(value)} ms`
+}
+
+/** 0.0214 → "2.1%"; null → "—". */
+export function percent(fraction: number | null | undefined): string {
+  if (fraction === null || fraction === undefined) return '—'
+  const p = fraction * 100
+  if (p > 0 && p < 0.1) return '<0.1%'
+  return `${oneDecimal.format(p)}%`
+}
+
+/** Chart axis label: "14:05" within a day, "9 Nov" for longer ranges. */
+export function axisTime(value: string, spansDays: boolean): string {
+  const date = new Date(value)
+  return spansDays
+    ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(date)
+    : new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(date)
+}
+
+/** "14:02:11" */
+export function clockTime(value: string): string {
+  return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(value))
+}

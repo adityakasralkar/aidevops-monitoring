@@ -2,10 +2,12 @@ import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/
 import { AppShell } from './components/layout/AppShell'
 import { RootLayout } from './components/layout/RootLayout'
 import { parseLoginSearch, requireSession, skipLoginWhenSignedIn } from './features/auth/session'
+import { parseRangeSearch } from './features/overview/range'
 import { ProjectGate } from './features/projects/ProjectGate'
 import { ConnectPage } from './pages/ConnectPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { OverviewPage } from './pages/OverviewPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 
@@ -65,6 +67,13 @@ const projectRoute = createRoute({ getParentRoute: () => shellRoute, path: 'p/$p
 const projectPage = <TPath extends string>(path: TPath, title: string) =>
   createRoute({ getParentRoute: () => projectRoute, path, component: PlaceholderPage, staticData: { title } })
 
+const overviewRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: '/',
+  validateSearch: parseRangeSearch,
+  component: OverviewPage,
+})
+
 const connectRoute = createRoute({ getParentRoute: () => projectRoute, path: 'connect', component: ConnectPage })
 
 const routeTree = rootRoute.addChildren([
@@ -74,7 +83,7 @@ const routeTree = rootRoute.addChildren([
   shellRoute.addChildren([
     accountRoute,
     projectRoute.addChildren([
-      projectPage('/', 'Overview'),
+      overviewRoute,
       projectPage('logs', 'Logs'),
       projectPage('errors', 'Errors'),
       projectPage('metrics', 'Metrics'),

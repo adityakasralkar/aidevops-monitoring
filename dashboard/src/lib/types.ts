@@ -49,3 +49,74 @@ export interface Service {
   errors: number
   metrics: number
 }
+
+export type Severity = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL'
+export type DiagnosisStatus = 'PENDING' | 'COMPLETED' | 'FAILED'
+
+/** One log line, from the logs and errors endpoints. */
+export interface LogEntry {
+  id: string
+  timestamp: string
+  received_at: string
+  severity: Severity
+  service: string
+  message: string
+  stack_trace?: string
+  attributes?: Record<string, unknown>
+  /** Only on ERROR / CRITICAL logs. */
+  diagnosis_status?: DiagnosisStatus
+  ai_root_cause?: string
+  ai_suggested_fix?: string
+}
+
+export interface LogPage {
+  range: string
+  items: LogEntry[]
+  /** Empty when there are no older entries. */
+  next_cursor?: string
+}
+
+/** One time bucket of the overview charts. */
+export interface OverviewStep {
+  t: string
+  requests: number
+  /** Requests answered with a 5xx status. */
+  errors: number
+  p50_ms: number | null
+  p95_ms: number | null
+}
+
+export interface OverviewService {
+  name: string
+  language?: string
+  last_seen: string
+  requests_per_min: number
+  /** 0–1; null when the service had no requests. */
+  error_rate: number | null
+  p95_ms: number | null
+  error_logs: number
+}
+
+/** GET /api/v1/projects/{id}/overview */
+export interface Overview {
+  range: string
+  since: string
+  until: string
+  step_seconds: number
+  last_data_at: string | null
+  /** false: the app sends logs but no HTTP request metrics yet. */
+  has_http_metrics: boolean
+  requests: number
+  requests_per_min: number
+  /** 0–1, share of requests with a 5xx status. */
+  error_rate: number | null
+  p50_ms: number | null
+  p95_ms: number | null
+  /** ERROR / CRITICAL logs in the range. */
+  errors: number
+  /** Of those, how many wait for AI diagnosis. */
+  errors_pending: number
+  series: OverviewStep[]
+  services: OverviewService[]
+  truncated: boolean
+}

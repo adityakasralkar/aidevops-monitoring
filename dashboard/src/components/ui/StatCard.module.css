@@ -1,0 +1,66 @@
+.card {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: var(--space-7) var(--space-8);
+  border-radius: var(--radius-panel);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.label {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+}
+
+.value {
+  font-size: var(--text-kpi);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.error {
+  color: var(--error-text);
+}
+
+.empty {
+  color: var(--placeholder);
+}
+
+.unit {
+  font-size: var(--text-md);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.noteError {
+  color: var(--error-ink);
+}
+
+/* Phone: two cards per row, then one below 400px. */
+@media (max-width: 767px) {
+  .card {
+    flex-basis: calc(50% - var(--space-3));
+    padding: var(--space-6) var(--space-7);
+  }
+}
+
+@media (max-width: 399px) {
+  .card {
+    flex-basis: 100%;
+  }
+}
