@@ -30,6 +30,25 @@
   --code-bg: #121412;
   --code-text: #e8eae4;
 
+  /* Dark brand panel (login) */
+  --dark-text: #f4f4f2;
+  --dark-text-2: #b5b9b0;
+  --dark-text-muted: #a9ada5;
+  --dark-text-faint: #8f938b;
+  --dark-border: #2b2f2a;
+  --dark-surface: #181a17;
+  --dark-code: #d9dcd4;
+  --lime-glow: rgba(197, 240, 74, 0.14);
+
+  /* Notices */
+  --info-soft: rgba(230, 236, 242, 0.85);
+  --info-ink: #2f4558;
+
+  /* Form controls */
+  --input-bg: rgba(255, 255, 255, 0.85);
+  --track: rgba(18, 20, 18, 0.05);
+  --tab-shadow: 0 1px 2px rgba(18, 20, 18, 0.08);
+
   /* Page background: a soft colour wash behind the glass panels */
   --page-base: #f5f5f2;
   --wash-lime: #eaf5cf;

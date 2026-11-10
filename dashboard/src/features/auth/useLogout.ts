@@ -1,19 +1,25 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { api } from '../../lib/api'
+import { useAppDispatch, useAppSelector } from '../../store'
 import { signedOut } from '../../store/authSlice'
-import { useAppDispatch } from '../../store'
 
 /**
- * Ends the session in the app: forgets the token, drops every cached query
- * (so the next user never sees this user's data) and goes to the login page.
- * The call to POST /auth/logout is added together with the API client.
+ * Logs out: forgets the session in the app straight away, drops every cached
+ * query (so the next user never sees this user's data), goes to the login
+ * page, and ends the session on the server in the background.
  */
 export function useLogout() {
   const dispatch = useAppDispatch()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const token = useAppSelector((state) => state.auth.token)
 
   return () => {
+    if (token) {
+      // Explicit token: a 401 here (already expired) is fine and ignored.
+      api('/auth/logout', { method: 'POST', token }).catch(() => {})
+    }
     dispatch(signedOut())
     queryClient.clear()
     void navigate({ to: '/login' })

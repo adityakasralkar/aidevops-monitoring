@@ -1,0 +1,31 @@
+.button {
+  height: var(--control-height);
+  padding: 0 var(--space-7);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--graphite);
+  color: var(--white);
+  font-size: var(--text-base);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--text-2);
+}
+
+.button:disabled {
+  cursor: default;
+}
+
+.button[aria-busy='true'] {
+  opacity: 0.75;
+}
+
+.full {
+  width: 100%;
+}

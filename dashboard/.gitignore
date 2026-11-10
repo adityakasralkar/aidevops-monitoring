@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local settings (API URL etc.). Copy .env.example to .env.
+.env

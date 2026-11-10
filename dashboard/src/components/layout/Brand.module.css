@@ -14,3 +14,11 @@
   border-radius: 5px;
   background: var(--lime);
 }
+
+.dark {
+  color: var(--dark-text);
+}
+
+.dark .ai {
+  color: var(--graphite);
+}

@@ -1,12 +1,12 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import { useSessionUser } from '../../features/auth/queries'
 import { useLogout } from '../../features/auth/useLogout'
-import { useAppSelector } from '../../store'
 import { LogOutIcon } from '../ui/icons/Icons'
 import styles from './UserCard.module.css'
 
 /** Bottom of the sidebar: who is signed in, a link to Account and Log out. */
 export function UserCard() {
-  const user = useAppSelector((state) => state.auth.user)
+  const user = useSessionUser()
   const onAccountPage = useRouterState({ select: (s) => s.location.pathname === '/account' })
   const logOut = useLogout()
 
