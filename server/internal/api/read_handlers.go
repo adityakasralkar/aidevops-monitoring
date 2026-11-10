@@ -25,6 +25,7 @@ type TelemetryReader interface {
 	CountErrors(ctx context.Context, projectID bson.ObjectID, since time.Time) (total, pending int64, err error)
 	MetricCatalog(ctx context.Context, projectID bson.ObjectID, since time.Time) ([]model.MetricInfo, error)
 	MetricPoints(ctx context.Context, q model.MetricQuery) ([]model.MetricPoint, bool, error)
+	CILogs(ctx context.Context, projectID bson.ObjectID, since time.Time) ([]model.LogRecord, error)
 }
 
 // Time ranges the dashboard can ask for.

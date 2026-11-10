@@ -38,3 +38,152 @@ export interface Project {
 export interface CreatedProject extends Project {
   api_key: string
 }
+
+/** One program that sent data, from GET /api/v1/projects/{id}/services. */
+export interface Service {
+  name: string
+  /** From the SDK, e.g. "nodejs", "python"; missing if the SDK didn't say. */
+  language?: string
+  last_seen: string
+  logs: number
+  errors: number
+  metrics: number
+}
+
+export type Severity = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL'
+export type DiagnosisStatus = 'PENDING' | 'COMPLETED' | 'FAILED'
+
+/** One log line, from the logs and errors endpoints. */
+export interface LogEntry {
+  id: string
+  timestamp: string
+  received_at: string
+  severity: Severity
+  service: string
+  message: string
+  stack_trace?: string
+  attributes?: Record<string, unknown>
+  /** Only on ERROR / CRITICAL logs. */
+  diagnosis_status?: DiagnosisStatus
+  ai_root_cause?: string
+  ai_suggested_fix?: string
+}
+
+export interface LogPage {
+  range: string
+  items: LogEntry[]
+  /** Empty when there are no older entries. */
+  next_cursor?: string
+}
+
+/** One time bucket of the overview charts. */
+export interface OverviewStep {
+  t: string
+  requests: number
+  /** Requests answered with a 5xx status. */
+  errors: number
+  p50_ms: number | null
+  p95_ms: number | null
+}
+
+export interface OverviewService {
+  name: string
+  language?: string
+  last_seen: string
+  requests_per_min: number
+  /** 0–1; null when the service had no requests. */
+  error_rate: number | null
+  p95_ms: number | null
+  error_logs: number
+}
+
+/** GET /api/v1/projects/{id}/overview */
+export interface Overview {
+  range: string
+  since: string
+  until: string
+  step_seconds: number
+  last_data_at: string | null
+  /** false: the app sends logs but no HTTP request metrics yet. */
+  has_http_metrics: boolean
+  requests: number
+  requests_per_min: number
+  /** 0–1, share of requests with a 5xx status. */
+  error_rate: number | null
+  p50_ms: number | null
+  p95_ms: number | null
+  /** ERROR / CRITICAL logs in the range. */
+  errors: number
+  /** Of those, how many wait for AI diagnosis. */
+  errors_pending: number
+  series: OverviewStep[]
+  services: OverviewService[]
+  truncated: boolean
+}
+
+/** One step of a metric chart: gauges and sums fill value, histograms count/p50/p95. */
+export interface ChartPoint {
+  t: string
+  value?: number
+  count?: number
+  p50?: number
+  p95?: number
+}
+
+/** One metric of one service as a chart. */
+export interface MetricSeries {
+  name: string
+  service: string
+  type: 'gauge' | 'sum' | 'histogram'
+  unit?: string
+  step_seconds: number
+  points: ChartPoint[]
+  distribution?: { bounds: number[]; counts: number[] }
+}
+
+/** GET /api/v1/projects/{id}/errors/{errorId}: the error and the 10 minutes before it. */
+export interface ErrorDetail extends LogEntry {
+  context: {
+    window_start: string
+    window_end: string
+    metrics: MetricSeries[]
+    related_logs: LogEntry[]
+  }
+}
+
+/** One metric of one service, from GET /api/v1/projects/{id}/metrics. */
+export interface MetricInfo {
+  name: string
+  service: string
+  type: 'gauge' | 'sum' | 'histogram'
+  unit?: string
+  last_seen: string
+  last_value?: number
+  points: number
+}
+
+/** One failed step of a CI run. */
+export interface PipelineStep {
+  name: string
+  severity: Severity
+  message: string
+  output?: string
+  /** The log on the Errors page. */
+  log_id: string
+}
+
+/** One CI run, from GET /api/v1/projects/{id}/pipelines. */
+export interface PipelineRun {
+  run_id: string
+  pipeline: string
+  url?: string
+  repository?: string
+  branch?: string
+  commit_sha?: string
+  commit_message?: string
+  author?: string
+  service: string
+  at: string
+  result: 'passed' | 'failed'
+  failed_steps: PipelineStep[]
+}

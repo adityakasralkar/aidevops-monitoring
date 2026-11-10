@@ -158,11 +158,15 @@ func (s Steps) Start(i int) time.Time {
 	return s.Since.Add(time.Duration(i) * s.Step)
 }
 
-// StepFor picks a chart step for a time range so that a chart has roughly
-// 30–100 points, using round sizes people recognise.
+// StepFor picks a chart step for a time range so that a chart has at most
+// 100 points, using round sizes people recognise.
+//
+// The shortest step is one minute: OpenTelemetry SDKs export metrics every
+// 60 seconds by default, so shorter steps would leave most of them empty
+// and turn a smooth line into spikes.
 func StepFor(rng time.Duration) time.Duration {
 	for _, step := range []time.Duration{
-		15 * time.Second, 30 * time.Second, time.Minute, 2 * time.Minute, 5 * time.Minute,
+		time.Minute, 2 * time.Minute, 5 * time.Minute,
 		10 * time.Minute, 15 * time.Minute, 30 * time.Minute, time.Hour, 2 * time.Hour,
 		6 * time.Hour, 12 * time.Hour, 24 * time.Hour,
 	} {

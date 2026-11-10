@@ -1,0 +1,360 @@
+.stats {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.aiBadge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--lime);
+  color: var(--graphite);
+}
+
+.charts,
+.lists {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.card {
+  flex: 1 1 420px;
+  min-width: 0;
+  padding: var(--space-7) var(--space-8);
+  border-radius: var(--radius-panel);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.cardTitle {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.legend i {
+  width: 12px;
+  height: 2px;
+}
+
+.keyMain {
+  background: var(--graphite);
+}
+
+.keyError {
+  background: var(--error);
+}
+
+.keyMuted {
+  background: var(--neutral-dot);
+}
+
+/* Lists: the content runs edge to edge, the header keeps its padding. */
+.listCard {
+  flex: 3 1 460px;
+  padding: 0;
+  gap: 0;
+}
+
+.servicesCard {
+  flex: 2 1 340px;
+}
+
+.listHead {
+  padding: 14px var(--space-8);
+  border-bottom: 1px solid var(--hairline-strong);
+}
+
+.listBody {
+  padding: var(--space-7) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.headLink {
+  font-size: var(--text-md);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+.errorList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.errorList li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.errorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-8);
+  text-decoration: none;
+  color: var(--graphite);
+}
+
+.errorRow:hover {
+  background: var(--glass-hover);
+  color: var(--graphite);
+}
+
+.errorText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.errorMessage {
+  font-size: var(--text-base);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.errorMeta {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.diagnosis {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+
+.tableScroll {
+  overflow-x: auto;
+  padding: 0 var(--space-8);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+}
+
+.table thead th {
+  padding: var(--space-5) var(--space-4);
+  text-align: left;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.table thead th:first-child {
+  padding-left: 0;
+}
+
+.table tbody tr {
+  border-top: 1px solid var(--hairline);
+}
+
+.table tbody th,
+.table tbody td {
+  padding: 11px var(--space-4);
+  white-space: nowrap;
+}
+
+.table tbody th {
+  padding-left: 0;
+}
+
+.table .num {
+  text-align: right;
+}
+
+.table tr > :last-child {
+  padding-right: 0;
+}
+
+.serviceName {
+  font-weight: 500;
+  text-align: left;
+}
+
+.hot {
+  color: var(--error-text);
+}
+
+.footnote {
+  padding: var(--space-5) var(--space-8) 14px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* No request data */
+.empty {
+  flex-basis: 100%;
+  align-items: center;
+  text-align: center;
+  padding: 48px var(--space-9);
+}
+
+.emptyIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--graphite);
+  color: var(--lime);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.emptyText {
+  max-width: 460px;
+  font-size: var(--text-base);
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.emptyActions {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.primaryLink,
+.secondaryLink {
+  height: var(--control-height);
+  padding: 0 var(--space-7);
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-control);
+  font-size: var(--text-base);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.primaryLink {
+  background: var(--graphite);
+  color: var(--white);
+}
+
+.primaryLink:hover {
+  background: var(--text-2);
+  color: var(--white);
+}
+
+.secondaryLink {
+  border: 1px solid var(--control-border);
+  background: var(--glass-strong);
+}
+
+.empty .footnote {
+  padding: 0;
+}
+
+/* Page header right side and loading / error states */
+.statusLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.loadingCard {
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.errorBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-7);
+  flex-wrap: wrap;
+  color: var(--error-ink);
+}
+
+@media (max-width: 767px) {
+  .card {
+    padding: var(--space-7);
+  }
+
+  .listCard {
+    padding: 0;
+  }
+
+  .listHead,
+  .errorRow,
+  .listBody,
+  .footnote {
+    padding-left: var(--space-7);
+    padding-right: var(--space-7);
+  }
+
+  .tableScroll {
+    padding: 0 var(--space-7);
+  }
+
+  .errorRow {
+    flex-wrap: wrap;
+    row-gap: var(--space-3);
+  }
+
+  .errorText {
+    flex-basis: calc(100% - 90px);
+  }
+
+  .errorMessage {
+    white-space: normal;
+  }
+
+  .empty {
+    padding: 32px var(--space-7);
+  }
+}

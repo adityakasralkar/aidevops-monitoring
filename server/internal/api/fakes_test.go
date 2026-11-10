@@ -495,6 +495,7 @@ type fakeReader struct {
 	points    []model.MetricPoint
 	truncated bool
 	failWith  error
+	ciLogs    []model.LogRecord
 
 	lastLogQuery    model.LogQuery
 	logQueries      []model.LogQuery
@@ -503,6 +504,15 @@ type fakeReader struct {
 
 func (f *fakeReader) Services(_ context.Context, _ bson.ObjectID, _ time.Time) ([]model.ServiceInfo, error) {
 	return f.services, f.failWith
+}
+
+func (f *fakeReader) CILogs(_ context.Context, _ bson.ObjectID, _ time.Time) ([]model.LogRecord, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failWith != nil {
+		return nil, f.failWith
+	}
+	return f.ciLogs, nil
 }
 
 func (f *fakeReader) Logs(_ context.Context, q model.LogQuery) ([]model.LogRecord, error) {

@@ -115,7 +115,7 @@ func TestSteps(t *testing.T) {
 
 func TestStepFor(t *testing.T) {
 	tests := map[time.Duration]time.Duration{
-		15 * time.Minute:   15 * time.Second,
+		15 * time.Minute:   time.Minute, // never shorter than the SDKs' 60 s export
 		time.Hour:          time.Minute,
 		6 * time.Hour:      5 * time.Minute,
 		24 * time.Hour:     15 * time.Minute,

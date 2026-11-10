@@ -14,9 +14,20 @@
   border-color: var(--graphite);
 }
 
+.dark {
+  border-color: var(--dark-border-2);
+  background: var(--dark-raised);
+  color: var(--code-text);
+}
+
+.dark:hover {
+  border-color: var(--dark-text-muted);
+}
+
 .copied {
   border-color: var(--lime);
   background: var(--lime);
+  color: var(--graphite);
 }
 
 @media (max-width: 767px) {

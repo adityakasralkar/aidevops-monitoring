@@ -1,0 +1,64 @@
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.svg {
+  width: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--hairline);
+}
+
+.base {
+  stroke: var(--hairline-strong);
+}
+
+.line {
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.area {
+  fill: var(--lime);
+  fill-opacity: 0.3;
+  stroke: none;
+}
+
+.main .line {
+  stroke: var(--graphite);
+}
+
+.main .dot {
+  fill: var(--graphite);
+}
+
+.error .line {
+  stroke: var(--error);
+}
+
+.error .dot {
+  fill: var(--error);
+}
+
+.muted .line {
+  stroke: var(--neutral-dot);
+}
+
+.muted .dot {
+  fill: var(--neutral-dot);
+}
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}

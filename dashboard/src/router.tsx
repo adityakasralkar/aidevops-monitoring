@@ -1,12 +1,24 @@
 import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router'
 import { AppShell } from './components/layout/AppShell'
+import { AccountPage } from './pages/AccountPage'
 import { RootLayout } from './components/layout/RootLayout'
 import { parseLoginSearch, requireSession, skipLoginWhenSignedIn } from './features/auth/session'
+import { parseErrorSearch } from './features/errors/filters'
+import { parseLogSearch } from './features/logs/filters'
+import { parseMetricSearch } from './features/metrics/search'
+import { parseRangeSearch } from './features/overview/range'
+import { parsePipelineSearch } from './features/pipelines/queries'
 import { ProjectGate } from './features/projects/ProjectGate'
+import { ConnectPage } from './pages/ConnectPage'
+import { ErrorsPage } from './pages/ErrorsPage'
 import { LoginPage } from './pages/LoginPage'
+import { LogsPage } from './pages/LogsPage'
+import { MetricsPage } from './pages/MetricsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
+import { OverviewPage } from './pages/OverviewPage'
+import { PipelinesPage } from './pages/PipelinesPage'
 import { ProjectsPage } from './pages/ProjectsPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 // Code-based route tree. URL map:
 //   /login                 log in / sign up (?expired=true&redirect=/path)
@@ -50,19 +62,48 @@ const shellRoute = createRoute({
   component: AppShell,
 })
 
-const accountRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: 'account',
-  component: PlaceholderPage,
-  staticData: { title: 'Account' },
-})
+const accountRoute = createRoute({ getParentRoute: () => shellRoute, path: 'account', component: AccountPage })
 
 const projectRoute = createRoute({ getParentRoute: () => shellRoute, path: 'p/$projectId', component: ProjectGate })
 
-// Generic so each path keeps its exact text type ('logs', not string);
-// that is what lets <Link to="/p/$projectId/logs"> be type-checked.
-const projectPage = <TPath extends string>(path: TPath, title: string) =>
-  createRoute({ getParentRoute: () => projectRoute, path, component: PlaceholderPage, staticData: { title } })
+const overviewRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: '/',
+  validateSearch: parseRangeSearch,
+  component: OverviewPage,
+})
+
+const logsRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: 'logs',
+  validateSearch: parseLogSearch,
+  component: LogsPage,
+})
+
+const errorsRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: 'errors',
+  validateSearch: parseErrorSearch,
+  component: ErrorsPage,
+})
+
+const metricsRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: 'metrics',
+  validateSearch: parseMetricSearch,
+  component: MetricsPage,
+})
+
+const settingsRoute = createRoute({ getParentRoute: () => projectRoute, path: 'settings', component: SettingsPage })
+
+const pipelinesRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: 'pipelines',
+  validateSearch: parsePipelineSearch,
+  component: PipelinesPage,
+})
+
+const connectRoute = createRoute({ getParentRoute: () => projectRoute, path: 'connect', component: ConnectPage })
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -71,13 +112,13 @@ const routeTree = rootRoute.addChildren([
   shellRoute.addChildren([
     accountRoute,
     projectRoute.addChildren([
-      projectPage('/', 'Overview'),
-      projectPage('logs', 'Logs'),
-      projectPage('errors', 'Errors'),
-      projectPage('metrics', 'Metrics'),
-      projectPage('pipelines', 'Pipelines'),
-      projectPage('connect', 'Connect app'),
-      projectPage('settings', 'Settings'),
+      overviewRoute,
+      logsRoute,
+      errorsRoute,
+      metricsRoute,
+      pipelinesRoute,
+      connectRoute,
+      settingsRoute,
     ]),
   ]),
 ])
@@ -87,9 +128,5 @@ export const router = createRouter({ routeTree, defaultPreload: 'intent' })
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
-  }
-  // Extra info a route can carry; PlaceholderPage reads it.
-  interface StaticDataRouteOption {
-    title?: string
   }
 }
