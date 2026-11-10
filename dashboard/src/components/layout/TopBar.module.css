@@ -23,6 +23,11 @@
 
 .email {
   color: var(--text-muted);
+  text-decoration: none;
+}
+
+.email:hover {
+  color: var(--graphite);
 }
 
 .logout {
@@ -36,4 +41,19 @@
 
 .logout:hover {
   color: var(--text-2);
+}
+
+@media (max-width: 767px) {
+  .bar {
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-7);
+  }
+
+  .email {
+    display: none;
+  }
+
+  .logout {
+    min-height: 44px;
+    padding: 0 var(--space-6);
+  }
 }

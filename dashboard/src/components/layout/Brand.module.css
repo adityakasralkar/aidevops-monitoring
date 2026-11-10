@@ -22,3 +22,10 @@
 .dark .ai {
   color: var(--graphite);
 }
+
+/* Tablet icon rail: only the "ai" pill fits. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .collapsible .rest {
+    display: none;
+  }
+}

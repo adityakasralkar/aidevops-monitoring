@@ -4,7 +4,7 @@ import { useLogout } from '../../features/auth/useLogout'
 import { Brand } from './Brand'
 import styles from './TopBar.module.css'
 
-/** Header for pages without a project open (the Projects list). */
+/** Header for signed-in pages without a project open (the Projects list). */
 export function TopBar() {
   const email = useSessionUser()?.email
   const logOut = useLogout()
@@ -13,18 +13,14 @@ export function TopBar() {
     <header className={styles.bar}>
       <Brand />
       <div className={styles.right}>
-        {email ? (
-          <>
-            <span className={styles.email}>{email}</span>
-            <button type="button" className={styles.logout} onClick={logOut}>
-              Log out
-            </button>
-          </>
-        ) : (
-          <Link to="/login" className={styles.logout}>
-            Log in
+        {email && (
+          <Link to="/account" className={styles.email} title="Account settings">
+            {email}
           </Link>
         )}
+        <button type="button" className={styles.logout} onClick={logOut}>
+          Log out
+        </button>
       </div>
     </header>
   )

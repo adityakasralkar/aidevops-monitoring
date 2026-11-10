@@ -18,8 +18,17 @@
   box-shadow: var(--glass-shadow);
 }
 
-.brand {
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
   padding: var(--space-2) var(--space-4);
+}
+
+/* The close button only exists in the phone drawer. */
+.close {
+  display: none;
 }
 
 .switcher {
@@ -35,13 +44,14 @@
   color: var(--graphite);
 }
 
-.switcherLabel {
+.switcher .label {
   flex: 1 1 auto;
   font-size: var(--text-base);
   font-weight: 500;
 }
 
 .switcherIcon {
+  flex: 0 0 auto;
   color: var(--text-muted);
 }
 
@@ -67,6 +77,10 @@
   color: var(--text-2);
 }
 
+.link svg {
+  flex: 0 0 auto;
+}
+
 .link:hover {
   background: var(--glass-hover);
   color: var(--graphite);
@@ -83,17 +97,94 @@
   flex: 1 1 auto;
 }
 
-/* Narrow screens: the sidebar sits on top and scrolls with the page. */
-@media (max-width: 760px) {
+/* ---- Tablet: icon rail ---- */
+@media (min-width: 768px) and (max-width: 1023px) {
   .sidebar {
-    flex-basis: auto;
-    position: static;
-    height: auto;
-    min-height: 0;
-    width: 100%;
+    flex-basis: 72px;
+    width: 72px;
+    padding: var(--space-7) var(--space-4);
+    align-items: stretch;
   }
 
-  .spacer {
-    display: none;
+  .brandRow {
+    justify-content: center;
+    padding: var(--space-2) 0;
+  }
+
+  .switcher,
+  .link {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+
+/* ---- Phone: slide-in drawer ---- */
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    z-index: 30;
+    top: 0;
+    left: 0;
+    width: min(300px, 85vw);
+    height: 100vh;
+    height: 100dvh; /* phone browsers: the visible height, toolbar excluded */
+    min-height: 0;
+    border-radius: 0 var(--radius-panel) var(--radius-panel) 0;
+    background: var(--glass-strong);
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition:
+      transform 200ms ease,
+      visibility 0s linear 200ms;
+  }
+
+  .open {
+    transform: none;
+    visibility: visible;
+    transition:
+      transform 200ms ease,
+      visibility 0s;
+  }
+
+  .close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-right: calc(-1 * var(--space-4));
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+
+  .close:hover {
+    background: var(--glass-hover);
+  }
+
+  .link {
+    height: 44px;
+  }
+
+  .switcher {
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .open {
+    transition: none;
   }
 }

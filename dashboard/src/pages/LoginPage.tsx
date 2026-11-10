@@ -1,5 +1,6 @@
 import { useSearch } from '@tanstack/react-router'
 import { useEffect } from 'react'
+import { Brand } from '../components/layout/Brand'
 import { BrandPanel } from '../features/auth/BrandPanel'
 import { LoginForm } from '../features/auth/LoginForm'
 import styles from './LoginPage.module.css'
@@ -16,6 +17,9 @@ export function LoginPage() {
     <div className={styles.page}>
       <BrandPanel expired={expired} />
       <main className={styles.formSide}>
+        <div className={styles.compactBrand}>
+          <Brand />
+        </div>
         <LoginForm expired={expired} redirect={redirect} />
       </main>
     </div>
