@@ -4,12 +4,14 @@ import { RootLayout } from './components/layout/RootLayout'
 import { parseLoginSearch, requireSession, skipLoginWhenSignedIn } from './features/auth/session'
 import { parseErrorSearch } from './features/errors/filters'
 import { parseLogSearch } from './features/logs/filters'
+import { parseMetricSearch } from './features/metrics/search'
 import { parseRangeSearch } from './features/overview/range'
 import { ProjectGate } from './features/projects/ProjectGate'
 import { ConnectPage } from './pages/ConnectPage'
 import { ErrorsPage } from './pages/ErrorsPage'
 import { LoginPage } from './pages/LoginPage'
 import { LogsPage } from './pages/LogsPage'
+import { MetricsPage } from './pages/MetricsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -92,6 +94,13 @@ const errorsRoute = createRoute({
   component: ErrorsPage,
 })
 
+const metricsRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: 'metrics',
+  validateSearch: parseMetricSearch,
+  component: MetricsPage,
+})
+
 const connectRoute = createRoute({ getParentRoute: () => projectRoute, path: 'connect', component: ConnectPage })
 
 const routeTree = rootRoute.addChildren([
@@ -104,7 +113,7 @@ const routeTree = rootRoute.addChildren([
       overviewRoute,
       logsRoute,
       errorsRoute,
-      projectPage('metrics', 'Metrics'),
+      metricsRoute,
       projectPage('pipelines', 'Pipelines'),
       connectRoute,
       projectPage('settings', 'Settings'),

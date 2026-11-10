@@ -150,3 +150,14 @@ export interface ErrorDetail extends LogEntry {
     related_logs: LogEntry[]
   }
 }
+
+/** One metric of one service, from GET /api/v1/projects/{id}/metrics. */
+export interface MetricInfo {
+  name: string
+  service: string
+  type: 'gauge' | 'sum' | 'histogram'
+  unit?: string
+  last_seen: string
+  last_value?: number
+  points: number
+}

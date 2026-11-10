@@ -1,0 +1,60 @@
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  height: 160px;
+}
+
+.column {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.count {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.bar {
+  width: 100%;
+  border-radius: var(--radius-pill) var(--radius-pill) 2px 2px;
+  background: var(--graphite);
+}
+
+.labels {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.labels span {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) {
+  .bars,
+  .labels {
+    gap: var(--space-2);
+  }
+
+  .count {
+    font-size: 10px;
+  }
+}
