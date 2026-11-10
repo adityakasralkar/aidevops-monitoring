@@ -16,6 +16,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ProjectsPage } from './pages/ProjectsPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 // Code-based route tree. URL map:
 //   /login                 log in / sign up (?expired=true&redirect=/path)
@@ -101,6 +102,8 @@ const metricsRoute = createRoute({
   component: MetricsPage,
 })
 
+const settingsRoute = createRoute({ getParentRoute: () => projectRoute, path: 'settings', component: SettingsPage })
+
 const connectRoute = createRoute({ getParentRoute: () => projectRoute, path: 'connect', component: ConnectPage })
 
 const routeTree = rootRoute.addChildren([
@@ -116,7 +119,7 @@ const routeTree = rootRoute.addChildren([
       metricsRoute,
       projectPage('pipelines', 'Pipelines'),
       connectRoute,
-      projectPage('settings', 'Settings'),
+      settingsRoute,
     ]),
   ]),
 ])
