@@ -2,10 +2,12 @@ import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/
 import { AppShell } from './components/layout/AppShell'
 import { RootLayout } from './components/layout/RootLayout'
 import { parseLoginSearch, requireSession, skipLoginWhenSignedIn } from './features/auth/session'
+import { parseErrorSearch } from './features/errors/filters'
 import { parseLogSearch } from './features/logs/filters'
 import { parseRangeSearch } from './features/overview/range'
 import { ProjectGate } from './features/projects/ProjectGate'
 import { ConnectPage } from './pages/ConnectPage'
+import { ErrorsPage } from './pages/ErrorsPage'
 import { LoginPage } from './pages/LoginPage'
 import { LogsPage } from './pages/LogsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -83,6 +85,13 @@ const logsRoute = createRoute({
   component: LogsPage,
 })
 
+const errorsRoute = createRoute({
+  getParentRoute: () => projectRoute,
+  path: 'errors',
+  validateSearch: parseErrorSearch,
+  component: ErrorsPage,
+})
+
 const connectRoute = createRoute({ getParentRoute: () => projectRoute, path: 'connect', component: ConnectPage })
 
 const routeTree = rootRoute.addChildren([
@@ -94,7 +103,7 @@ const routeTree = rootRoute.addChildren([
     projectRoute.addChildren([
       overviewRoute,
       logsRoute,
-      projectPage('errors', 'Errors'),
+      errorsRoute,
       projectPage('metrics', 'Metrics'),
       projectPage('pipelines', 'Pipelines'),
       connectRoute,

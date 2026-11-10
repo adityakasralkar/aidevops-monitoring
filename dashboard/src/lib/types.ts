@@ -120,3 +120,33 @@ export interface Overview {
   services: OverviewService[]
   truncated: boolean
 }
+
+/** One step of a metric chart: gauges and sums fill value, histograms count/p50/p95. */
+export interface ChartPoint {
+  t: string
+  value?: number
+  count?: number
+  p50?: number
+  p95?: number
+}
+
+/** One metric of one service as a chart. */
+export interface MetricSeries {
+  name: string
+  service: string
+  type: 'gauge' | 'sum' | 'histogram'
+  unit?: string
+  step_seconds: number
+  points: ChartPoint[]
+  distribution?: { bounds: number[]; counts: number[] }
+}
+
+/** GET /api/v1/projects/{id}/errors/{errorId}: the error and the 10 minutes before it. */
+export interface ErrorDetail extends LogEntry {
+  context: {
+    window_start: string
+    window_end: string
+    metrics: MetricSeries[]
+    related_logs: LogEntry[]
+  }
+}

@@ -43,7 +43,7 @@ export function LatestErrors({ projectId, range }: { projectId: string; range: R
             const d = diagnosis[e.diagnosis_status ?? 'PENDING']
             return (
               <li key={e.id}>
-                <Link to="/p/$projectId/errors" params={{ projectId }} className={styles.errorRow}>
+                <Link to="/p/$projectId/errors" params={{ projectId }} search={{ id: e.id, range }} className={styles.errorRow}>
                   <SeverityPill severity={e.severity} />
                   <span className={styles.errorText}>
                     <span className={styles.errorMessage}>{e.message}</span>
