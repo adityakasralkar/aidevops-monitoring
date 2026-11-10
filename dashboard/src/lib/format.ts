@@ -84,3 +84,13 @@ export function axisTime(value: string, spansDays: boolean): string {
 export function clockTime(value: string): string {
   return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(value))
 }
+
+/** Log timestamp: "14:02:14.208", with the date in front when not today. */
+export function logTime(value: string, now = new Date()): string {
+  const date = new Date(value)
+  const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(date)
+  const millis = String(date.getMilliseconds()).padStart(3, '0')
+  const sameDay = date.toDateString() === now.toDateString()
+  const day = sameDay ? '' : `${new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(date)} `
+  return `${day}${time}.${millis}`
+}

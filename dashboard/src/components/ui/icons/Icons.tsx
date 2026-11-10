@@ -180,3 +180,20 @@ export function CheckIcon(props: IconProps) {
     </Icon>
   )
 }
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={2} {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </Icon>
+  )
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={2} {...props}>
+      <path d="m9 6 6 6-6 6" />
+    </Icon>
+  )
+}

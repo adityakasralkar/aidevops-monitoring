@@ -22,7 +22,11 @@
   color: var(--warn-ink);
 }
 
-.info,
+.info {
+  background: var(--info-soft);
+  color: var(--info-ink);
+}
+
 .debug {
   background: var(--disabled-bg);
   color: var(--text-2);
