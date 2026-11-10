@@ -161,3 +161,29 @@ export interface MetricInfo {
   last_value?: number
   points: number
 }
+
+/** One failed step of a CI run. */
+export interface PipelineStep {
+  name: string
+  severity: Severity
+  message: string
+  output?: string
+  /** The log on the Errors page. */
+  log_id: string
+}
+
+/** One CI run, from GET /api/v1/projects/{id}/pipelines. */
+export interface PipelineRun {
+  run_id: string
+  pipeline: string
+  url?: string
+  repository?: string
+  branch?: string
+  commit_sha?: string
+  commit_message?: string
+  author?: string
+  service: string
+  at: string
+  result: 'passed' | 'failed'
+  failed_steps: PipelineStep[]
+}
