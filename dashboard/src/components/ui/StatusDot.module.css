@@ -1,0 +1,22 @@
+.dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: var(--radius-round);
+}
+
+.ok {
+  background: var(--ok);
+}
+
+.idle {
+  background: var(--placeholder);
+}
+
+.quiet {
+  background: var(--neutral-dot);
+}
+
+.error {
+  background: var(--error);
+}

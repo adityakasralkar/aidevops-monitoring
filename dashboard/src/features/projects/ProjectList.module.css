@@ -1,0 +1,116 @@
+.card {
+  border-radius: var(--radius-panel);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+}
+
+.head,
+.row {
+  display: grid;
+  grid-template-columns: 2.4fr 1fr 2fr 1.2fr;
+  gap: var(--space-6);
+  align-items: center;
+  padding: 14px var(--space-8);
+}
+
+.head {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--hairline-strong);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rows li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.row {
+  font-size: var(--text-base);
+  text-decoration: none;
+  color: var(--graphite);
+}
+
+.row:hover {
+  background: var(--glass-hover);
+  color: var(--graphite);
+}
+
+.name {
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.env {
+  color: var(--text-2);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.last {
+  color: var(--text-muted);
+}
+
+/* Words only needed when the columns stack (phone). */
+.label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Phone: each project becomes a small card. */
+@media (max-width: 767px) {
+  .head {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'name env'
+      'status last';
+    row-gap: var(--space-3);
+    padding: var(--space-7);
+    min-height: 44px;
+  }
+
+  .name {
+    grid-area: name;
+  }
+
+  .env {
+    grid-area: env;
+    font-size: var(--text-md);
+  }
+
+  .status {
+    grid-area: status;
+    font-size: var(--text-md);
+  }
+
+  .last {
+    grid-area: last;
+    font-size: var(--text-md);
+  }
+}

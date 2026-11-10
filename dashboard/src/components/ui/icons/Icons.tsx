@@ -147,3 +147,20 @@ export function CloseIcon(props: IconProps) {
     </Icon>
   )
 }
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={2} {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </Icon>
+  )
+}
+
+export function WarningIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={2} {...props}>
+      <path d="M12 3 2 20h20L12 3z" />
+      <path d="M12 10v4M12 17v.5" />
+    </Icon>
+  )
+}

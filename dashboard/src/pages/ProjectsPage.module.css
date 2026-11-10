@@ -26,3 +26,18 @@
     padding: var(--space-4) var(--space-4) var(--space-8);
   }
 }
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-7);
+  flex-wrap: wrap;
+  color: var(--error-ink);
+}

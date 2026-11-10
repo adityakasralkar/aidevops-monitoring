@@ -1,0 +1,88 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.legend {
+  font-size: var(--text-md);
+  font-weight: 500;
+  padding: 0;
+  margin-bottom: var(--space-3);
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border: 1px solid var(--option-border);
+  border-radius: var(--radius-inner);
+  background: var(--option-bg);
+  cursor: pointer;
+}
+
+.selected {
+  border-color: var(--graphite);
+  background: var(--option-bg-selected);
+}
+
+.radio {
+  margin: 2px 0 0;
+  accent-color: var(--graphite);
+}
+
+.optionText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.optionTitle {
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.optionBody {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+}
+
+.prefix {
+  font-size: var(--text-sm);
+}
+
+.error {
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-control);
+  background: var(--error-soft);
+  color: var(--error-ink);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+}
+
+@media (max-width: 767px) {
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+}

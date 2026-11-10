@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/
 import { AppShell } from './components/layout/AppShell'
 import { RootLayout } from './components/layout/RootLayout'
 import { parseLoginSearch, requireSession, skipLoginWhenSignedIn } from './features/auth/session'
+import { ProjectGate } from './features/projects/ProjectGate'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -56,7 +57,7 @@ const accountRoute = createRoute({
   staticData: { title: 'Account' },
 })
 
-const projectRoute = createRoute({ getParentRoute: () => shellRoute, path: 'p/$projectId' })
+const projectRoute = createRoute({ getParentRoute: () => shellRoute, path: 'p/$projectId', component: ProjectGate })
 
 // Generic so each path keeps its exact text type ('logs', not string);
 // that is what lets <Link to="/p/$projectId/logs"> be type-checked.

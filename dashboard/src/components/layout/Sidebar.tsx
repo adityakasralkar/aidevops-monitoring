@@ -11,6 +11,7 @@ import {
   PipelinesIcon,
   SettingsIcon,
 } from '../ui/icons/Icons'
+import { useProject } from '../../features/projects/queries'
 import { Brand } from './Brand'
 import { UserCard } from './UserCard'
 import styles from './Sidebar.module.css'
@@ -41,6 +42,7 @@ interface SidebarProps {
  */
 export function Sidebar({ open, onClose, closeButtonRef }: SidebarProps) {
   const { projectId } = useParams({ strict: false })
+  const project = useProject(projectId)
 
   return (
     <nav id={SIDEBAR_ID} aria-label="Main" className={open ? `${styles.sidebar} ${styles.open}` : styles.sidebar}>
@@ -52,7 +54,11 @@ export function Sidebar({ open, onClose, closeButtonRef }: SidebarProps) {
       </div>
 
       <Link to="/projects" className={styles.switcher} title="Switch project" onClick={onClose}>
-        <span className={styles.label}>{projectId ? 'Switch project' : 'All projects'}</span>
+        <span className={styles.label}>
+          {projectId ? (project.data?.name ?? (project.isError ? 'Unknown project' : '…')) : 'All projects'}
+          <span className="sr-only"> (switch project)</span>
+        </span>
+        {project.data && <span className={`${styles.label} ${styles.env}`}>{project.data.environment}</span>}
         <ChevronsUpDownIcon size={14} className={styles.switcherIcon} />
       </Link>
 
