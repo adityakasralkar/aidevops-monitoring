@@ -298,7 +298,7 @@ func TestOverviewRoute(t *testing.T) {
 		e.reader.points = nil
 		var empty overviewResponse
 		decodeBody(t, e.get(t, token, "/api/v1/projects/"+p.ID+"/overview?range=15m"), &empty)
-		if empty.HasHTTPMetrics || empty.Requests != 0 || empty.ErrorRate != nil || empty.P95 != nil || len(empty.Series) != 60 {
+		if empty.HasHTTPMetrics || empty.Requests != 0 || empty.ErrorRate != nil || empty.P95 != nil || len(empty.Series) != 15 { // 15m in 1-minute steps
 			t.Errorf("empty overview = %+v", empty)
 		}
 	})
