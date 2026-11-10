@@ -39,6 +39,8 @@
   --dark-surface: #181a17;
   --dark-code: #d9dcd4;
   --lime-glow: rgba(197, 240, 74, 0.14);
+  --dark-border-2: #3a3d38;
+  --dark-raised: #1c1f1b;
 
   /* Notices */
   --info-soft: rgba(230, 236, 242, 0.85);

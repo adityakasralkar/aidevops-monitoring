@@ -3,6 +3,7 @@ import { AppShell } from './components/layout/AppShell'
 import { RootLayout } from './components/layout/RootLayout'
 import { parseLoginSearch, requireSession, skipLoginWhenSignedIn } from './features/auth/session'
 import { ProjectGate } from './features/projects/ProjectGate'
+import { ConnectPage } from './pages/ConnectPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -64,6 +65,8 @@ const projectRoute = createRoute({ getParentRoute: () => shellRoute, path: 'p/$p
 const projectPage = <TPath extends string>(path: TPath, title: string) =>
   createRoute({ getParentRoute: () => projectRoute, path, component: PlaceholderPage, staticData: { title } })
 
+const connectRoute = createRoute({ getParentRoute: () => projectRoute, path: 'connect', component: ConnectPage })
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -76,7 +79,7 @@ const routeTree = rootRoute.addChildren([
       projectPage('errors', 'Errors'),
       projectPage('metrics', 'Metrics'),
       projectPage('pipelines', 'Pipelines'),
-      projectPage('connect', 'Connect app'),
+      connectRoute,
       projectPage('settings', 'Settings'),
     ]),
   ]),

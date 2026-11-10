@@ -5,6 +5,10 @@ interface CopyButtonProps {
   text: string
   /** Screen-reader name, e.g. "Copy API key". */
   label?: string
+  /** What the button says before copying. */
+  children?: string
+  /** `dark` on a dark code block. */
+  tone?: 'light' | 'dark'
 }
 
 /**
@@ -37,7 +41,7 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 /** Copies text to the clipboard; shows "Copied" for 2 seconds. */
-export function CopyButton({ text, label = 'Copy' }: CopyButtonProps) {
+export function CopyButton({ text, label = 'Copy', children = 'Copy', tone = 'light' }: CopyButtonProps) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
   const timer = useRef<number | undefined>(undefined)
 
@@ -52,11 +56,13 @@ export function CopyButton({ text, label = 'Copy' }: CopyButtonProps) {
   return (
     <button
       type="button"
-      className={state === 'copied' ? `${styles.button} ${styles.copied}` : styles.button}
+      className={[styles.button, tone === 'dark' ? styles.dark : '', state === 'copied' ? styles.copied : '']
+        .join(' ')
+        .trim()}
       onClick={copy}
       aria-label={label}
     >
-      <span aria-live="polite">{state === 'copied' ? 'Copied' : state === 'failed' ? 'Select and copy' : 'Copy'}</span>
+      <span aria-live="polite">{state === 'copied' ? 'Copied' : state === 'failed' ? 'Select and copy' : children}</span>
     </button>
   )
 }

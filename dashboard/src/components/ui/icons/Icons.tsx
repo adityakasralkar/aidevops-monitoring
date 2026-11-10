@@ -164,3 +164,19 @@ export function WarningIcon(props: IconProps) {
     </Icon>
   )
 }
+
+export function ExternalIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={2} {...props}>
+      <path d="M7 17 17 7M8 7h9v9" />
+    </Icon>
+  )
+}
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={2.2} {...props}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Icon>
+  )
+}

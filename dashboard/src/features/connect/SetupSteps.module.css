@@ -1,0 +1,137 @@
+.steps {
+  flex: 999 1 520px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.card {
+  padding: var(--space-8) var(--space-9);
+  border-radius: var(--radius-panel);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.title {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.number {
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  margin-right: var(--space-4);
+}
+
+.languages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: var(--space-4);
+}
+
+.language {
+  height: var(--control-height);
+  padding: 0 var(--space-6);
+  border: 1px solid var(--control-border);
+  border-radius: 9px;
+  background: var(--input-bg);
+  font-size: var(--text-md);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.language:hover {
+  border-color: var(--graphite);
+}
+
+.language[aria-pressed='true'] {
+  border-color: var(--graphite);
+  background: var(--graphite);
+  color: var(--white);
+}
+
+.other {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  align-items: flex-start;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.linkButton {
+  height: var(--control-height-sm);
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--control-border);
+  background: var(--input-bg);
+  font-size: var(--text-md);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nameField {
+  max-width: 360px;
+}
+
+.nameField input {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+}
+
+.keyNote {
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.keyNote code {
+  font-size: var(--text-sm);
+  color: var(--graphite);
+}
+
+.legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.legend strong {
+  font-weight: 500;
+  color: var(--graphite);
+}
+
+@media (max-width: 767px) {
+  .card {
+    padding: var(--space-7);
+  }
+
+  .language {
+    height: 44px;
+  }
+
+  .nameField {
+    max-width: none;
+  }
+
+  .nameField input {
+    font-size: 16px;
+  }
+}

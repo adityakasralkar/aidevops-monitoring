@@ -38,3 +38,14 @@ export interface Project {
 export interface CreatedProject extends Project {
   api_key: string
 }
+
+/** One program that sent data, from GET /api/v1/projects/{id}/services. */
+export interface Service {
+  name: string
+  /** From the SDK, e.g. "nodejs", "python"; missing if the SDK didn't say. */
+  language?: string
+  last_seen: string
+  logs: number
+  errors: number
+  metrics: number
+}
