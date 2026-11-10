@@ -44,6 +44,24 @@
   --info-soft: rgba(230, 236, 242, 0.85);
   --info-ink: #2f4558;
 
+  /* Popups (modal dialogs) */
+  --modal-bg: rgba(255, 255, 255, 0.82);
+  --modal-border: 1px solid rgba(255, 255, 255, 0.9);
+  --modal-shadow: 0 20px 60px rgba(18, 20, 18, 0.16);
+  --modal-backdrop: rgba(18, 20, 18, 0.14);
+  --modal-blur: blur(24px);
+
+  /* Warning notice (e.g. "you won't see this key again") */
+  --warn-soft: rgba(247, 242, 228, 0.9);
+  --warn-ink: #5c4510;
+
+  /* Inset list on a glass card */
+  --inset-bg: rgba(255, 255, 255, 0.65);
+  --option-border: rgba(18, 20, 18, 0.1);
+  --option-bg: rgba(255, 255, 255, 0.55);
+  --option-bg-selected: rgba(255, 255, 255, 0.95);
+  --disabled-bg: rgba(18, 20, 18, 0.06);
+
   /* Form controls */
   --input-bg: rgba(255, 255, 255, 0.85);
   --track: rgba(18, 20, 18, 0.05);

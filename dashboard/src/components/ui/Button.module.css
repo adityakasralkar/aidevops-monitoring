@@ -5,17 +5,36 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-4);
-  border: 0;
   border-radius: var(--radius-control);
-  background: var(--graphite);
-  color: var(--white);
   font-size: var(--text-base);
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.button:hover {
+.primary {
+  border: 0;
+  background: var(--graphite);
+  color: var(--white);
+}
+
+.primary:hover {
   background: var(--text-2);
+}
+
+.primary:disabled:not([aria-busy='true']) {
+  background: var(--disabled-bg);
+  color: var(--text-faint);
+}
+
+.secondary {
+  border: 1px solid var(--control-border);
+  background: var(--glass-strong);
+  color: var(--graphite);
+}
+
+.secondary:hover {
+  border-color: var(--graphite);
 }
 
 .button:disabled {

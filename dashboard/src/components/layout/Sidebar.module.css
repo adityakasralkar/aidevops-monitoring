@@ -46,8 +46,19 @@
 
 .switcher .label {
   flex: 1 1 auto;
+  min-width: 0;
   font-size: var(--text-base);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.switcher .env {
+  flex: 0 0 auto;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-muted);
 }
 
 .switcherIcon {

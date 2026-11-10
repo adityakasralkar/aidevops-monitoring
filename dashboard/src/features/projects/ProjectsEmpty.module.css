@@ -1,0 +1,90 @@
+.card {
+  width: 100%;
+  max-width: 540px;
+  margin: var(--space-9) auto 0;
+  padding: 32px;
+  border-radius: 18px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-9);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: var(--text-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.text {
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--inset-bg);
+  border: 1px solid var(--hairline);
+}
+
+.step {
+  display: flex;
+  gap: 14px;
+  padding: 14px var(--space-7);
+}
+
+.step + .step {
+  border-top: 1px solid var(--hairline);
+}
+
+.number {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  color: var(--text-faint);
+  padding-top: 1px;
+}
+
+.stepText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.stepTitle {
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.stepBody {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+}
+
+.cta {
+  align-self: flex-start;
+}
+
+@media (max-width: 767px) {
+  .card {
+    margin-top: 0;
+    padding: var(--space-8);
+  }
+
+  .cta {
+    align-self: stretch;
+  }
+}

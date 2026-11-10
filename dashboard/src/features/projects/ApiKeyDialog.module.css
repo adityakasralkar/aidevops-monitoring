@@ -1,0 +1,106 @@
+.lead {
+  margin-top: calc(-1 * var(--space-4));
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.lead strong {
+  font-weight: 500;
+  color: var(--graphite);
+}
+
+.keyField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.keyLabel {
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+
+.keyBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-6);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+  background: var(--input-bg);
+}
+
+.key {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  user-select: all;
+}
+
+.warning {
+  display: flex;
+  gap: var(--space-5);
+  align-items: flex-start;
+  padding: var(--space-6);
+  border-radius: var(--radius-inner);
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+.warning strong {
+  font-weight: 600;
+}
+
+.warningIcon {
+  flex: 0 0 16px;
+  margin-top: 2px;
+}
+
+.confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  font-size: var(--text-base);
+  cursor: pointer;
+}
+
+.confirm input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--graphite);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Phone: the key wraps instead of scrolling, so it can be read in full. */
+@media (max-width: 767px) {
+  .keyBox {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-6);
+  }
+
+  .key {
+    white-space: normal;
+    word-break: break-all;
+  }
+
+  .confirm {
+    min-height: 44px;
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+}
