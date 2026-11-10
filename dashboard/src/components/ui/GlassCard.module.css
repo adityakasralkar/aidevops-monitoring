@@ -1,0 +1,12 @@
+.card {
+  border-radius: var(--radius-panel);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.padded {
+  padding: var(--space-7) var(--space-8);
+}

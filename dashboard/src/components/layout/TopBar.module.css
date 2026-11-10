@@ -1,0 +1,39 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-7);
+  flex-wrap: wrap;
+  min-height: 56px;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-panel);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+  font-size: var(--text-md);
+}
+
+.email {
+  color: var(--text-muted);
+}
+
+.logout {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.logout:hover {
+  color: var(--text-2);
+}

@@ -1,0 +1,99 @@
+.sidebar {
+  flex: 0 0 var(--sidebar-width);
+  position: sticky;
+  top: var(--space-6);
+  align-self: flex-start;
+  height: calc(100vh - 2 * var(--space-6));
+  min-height: 520px;
+  overflow-y: auto;
+  padding: var(--space-7) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  border-radius: var(--radius-panel);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.brand {
+  padding: var(--space-2) var(--space-4);
+}
+
+.switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--control-height);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--hairline-soft);
+  border-radius: 9px;
+  background: var(--glass-strong);
+  text-decoration: none;
+  color: var(--graphite);
+}
+
+.switcherLabel {
+  flex: 1 1 auto;
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.switcherIcon {
+  color: var(--text-muted);
+}
+
+.links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  height: var(--control-height-sm);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-control);
+  text-decoration: none;
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.link:hover {
+  background: var(--glass-hover);
+  color: var(--graphite);
+}
+
+/* TanStack Router sets aria-current="page" on the active link. */
+.link[aria-current='page'] {
+  color: var(--graphite);
+  background: var(--white);
+  box-shadow: var(--raised-shadow);
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+/* Narrow screens: the sidebar sits on top and scrolls with the page. */
+@media (max-width: 760px) {
+  .sidebar {
+    flex-basis: auto;
+    position: static;
+    height: auto;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .spacer {
+    display: none;
+  }
+}
